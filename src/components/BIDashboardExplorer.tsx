@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useMemo, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { BACKEND_URL } from '../lib/config';
 
 const Plot = dynamic(() => import('./PlotlyWrapper'), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 h-96 rounded-xl flex items-center justify-center text-slate-500 font-bold">Cargando gráfico interactivo...</div> });
 
@@ -217,7 +218,7 @@ export default function BIDashboardExplorer() {
     
     const fetchData = async () => {
       try {
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+        const backendUrl = BACKEND_URL;
         const response = await fetch(`${backendUrl}/api/bi/raw?limit=200000`);
         if (!response.ok) throw new Error("API falló");
         

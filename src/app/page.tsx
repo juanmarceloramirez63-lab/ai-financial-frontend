@@ -14,6 +14,7 @@ import FraudDashboard from '../components/FraudDashboard';
 import BenchmarkingDashboard from '../components/BenchmarkingDashboard';
 import HumanInTheLoopForm from '../components/HumanInTheLoopForm';
 import dynamic from 'next/dynamic';
+import { BACKEND_URL } from '../lib/config';
 
 // ... (keep dynamic import of BIDashboard)
 const BIDashboard = dynamic(() => import('../components/BIDashboard'), { ssr: false });
@@ -127,7 +128,7 @@ export default function Dashboard() {
   const handleConfirmValidation = async (validatedData: any) => {
     setIsProcessingAnalysis(true);
     try {
-      const response = await fetch('http://localhost:8000/api/run-analysis', {
+      const response = await fetch(`${BACKEND_URL}/api/run-analysis`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

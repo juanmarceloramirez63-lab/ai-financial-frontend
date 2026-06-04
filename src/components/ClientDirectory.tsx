@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Building2, ChevronRight, RefreshCw, AlertCircle } from 'lucide-react';
+import { BACKEND_URL } from '../lib/config';
 
 export default function ClientDirectory({ onSelectClient }: { onSelectClient: (client: any) => void }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -13,7 +14,7 @@ export default function ClientDirectory({ onSelectClient }: { onSelectClient: (c
     try {
       // Intentamos cargar desde un endpoint del backend (que crearemos luego si es necesario)
       // Por ahora, como es frontend, simulamos la llamada. En producción deberías tener un GET /api/clientes
-      const response = await fetch('http://localhost:8000/api/clientes');
+      const response = await fetch(`${BACKEND_URL}/api/clientes`);
       if (!response.ok) {
         throw new Error('Endpoint /api/clientes no disponible');
       }

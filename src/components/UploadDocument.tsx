@@ -4,6 +4,7 @@ import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { UploadCloud, FileText, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { BACKEND_URL } from '../lib/config';
 
 interface UploadDocumentProps {
   onExtractComplete: (extractedData: any, documentUrls: string[]) => void;
@@ -50,7 +51,7 @@ export default function UploadDocument({ onExtractComplete }: UploadDocumentProp
       setIsAnalyzing(true);
 
       // 2. Enviar a nuestro Backend (FastAPI) para extraer datos puros
-      const response = await fetch('http://localhost:8000/api/extract', {
+      const response = await fetch(`${BACKEND_URL}/api/extract`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
