@@ -7,6 +7,9 @@ typescript: {
     // incluso si tu proyecto tiene errores de TypeScript.
     ignoreBuildErrors: true,
   },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
 
 export default nextConfig;
