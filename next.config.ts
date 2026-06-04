@@ -12,4 +12,5 @@ typescript: {
   },
 };
 
+// Trigger build with latest Vercel env variables
 export default nextConfig;
