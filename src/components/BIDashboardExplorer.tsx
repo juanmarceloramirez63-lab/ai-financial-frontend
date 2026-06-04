@@ -529,48 +529,55 @@ export default function BIDashboardExplorer() {
 
   return (
     <div className="flex flex-col gap-6 p-6 bg-[#000033] min-h-screen text-slate-200">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[#000022] p-6 rounded-xl border border-[#4fc3f7]/20 shadow-2xl relative overflow-hidden">
+      <div className="flex flex-col gap-6 bg-[#000022] p-6 rounded-xl border border-[#4fc3f7]/20 shadow-2xl relative">
         {usingCache && (
           <div className="absolute top-0 right-0 bg-rose-500/90 text-white text-[10px] font-black px-3 py-1 rounded-bl-lg shadow-lg flex items-center gap-1 backdrop-blur-md">
             <AlertCircle className="w-3 h-3" />
             USANDO DATOS EN CACHÉ/LOCALES
           </div>
         )}
-        <div className="flex items-center gap-4 z-10">
-          <div className="p-3 bg-[#4fc3f7]/10 rounded-lg">
-            <MapIcon className="text-[#4fc3f7] w-8 h-8" />
+        
+        {/* Fila del Título y Nivel */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex items-center gap-4 z-10">
+            <div className="p-3 bg-[#4fc3f7]/10 rounded-lg">
+              <MapIcon className="text-[#4fc3f7] w-8 h-8" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black text-white flex items-center gap-2 tracking-tight">
+                BI Explorador: Geointeligencia
+              </h2>
+              <p className="text-slate-500 text-sm mt-1">Análisis financiero multidimensional {level === 'dept' ? 'por Departamentos' : 'por Ciudades'}.</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-2xl font-black text-white flex items-center gap-2 tracking-tight">
-              BI Explorador: Geointeligencia
-            </h2>
-            <p className="text-slate-500 text-sm mt-1">Análisis financiero multidimensional {level === 'dept' ? 'por Departamentos' : 'por Ciudades'}.</p>
-          </div>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Selector de Nivel */}
-          <div className="flex bg-slate-900/50 p-1 rounded-lg border border-[#4fc3f7]/20">
+          {/* Selector de Nivel (Departamento / Ciudad) */}
+          <div className="flex bg-slate-900/50 p-1 rounded-lg border border-[#4fc3f7]/20 z-10 self-end md:self-auto">
             <button
               onClick={() => setLevel('dept')}
-              className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${level === 'dept' ? 'bg-[#4fc3f7] text-[#000033] shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+              className={`px-4 py-2 rounded-md text-xs font-bold transition-all ${level === 'dept' ? 'bg-[#4fc3f7] text-[#000033] shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
             >
               DEPARTAMENTO
             </button>
             <button
               onClick={() => setLevel('city')}
-              className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${level === 'city' ? 'bg-[#4fc3f7] text-[#000033] shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+              className={`px-4 py-2 rounded-md text-xs font-bold transition-all ${level === 'city' ? 'bg-[#4fc3f7] text-[#000033] shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
             >
               CIUDAD
             </button>
           </div>
+        </div>
 
-          <div className="flex items-center gap-3 bg-slate-900/50 p-2 rounded-lg border border-[#4fc3f7]/20">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Métrica:</span>
+        {/* Fila de Filtros Avanzados */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 pt-4 border-t border-[#4fc3f7]/10 z-10">
+          
+          {/* Filtro Métrica */}
+          <div className="flex flex-col gap-1.5 bg-slate-900/50 p-3 rounded-lg border border-[#4fc3f7]/20">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Métrica de Análisis</span>
             <select
               value={metric}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setMetric(e.target.value as MetricKey)}
-              className="bg-transparent text-[#4fc3f7] text-sm font-bold outline-none cursor-pointer hover:text-[#4fc3f7]/80 transition-colors"
+              className="bg-transparent text-[#4fc3f7] text-sm font-bold outline-none cursor-pointer hover:text-[#4fc3f7]/80 transition-colors w-full"
             >
               {METRIC_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value} className="bg-[#000022] text-slate-200">
@@ -580,9 +587,10 @@ export default function BIDashboardExplorer() {
             </select>
           </div>
 
-          <div className="flex items-center gap-3 bg-slate-900/50 p-2 rounded-lg border border-[#4fc3f7]/20">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Año:</span>
-            <div className="relative flex items-center group">
+          {/* Filtro Año */}
+          <div className="flex flex-col gap-1.5 bg-slate-900/50 p-3 rounded-lg border border-[#4fc3f7]/20 relative">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Año(s)</span>
+            <div className="relative flex items-center w-full">
               <select
                 multiple
                 value={selectedAnos}
@@ -590,9 +598,8 @@ export default function BIDashboardExplorer() {
                   const options = Array.from(e.target.selectedOptions, option => option.value);
                   setSelectedAnos(options);
                 }}
-                className="bg-transparent text-[#ffff00] text-sm font-bold outline-none cursor-pointer hover:text-[#ffff00]/80 transition-colors w-24 h-12 custom-scrollbar"
-                style={{ verticalAlign: "middle" }}
-                title="Mantén presionada la tecla Ctrl para seleccionar varios años"
+                className="bg-transparent text-[#ffff00] text-xs font-bold outline-none cursor-pointer hover:text-[#ffff00]/80 transition-colors w-full h-8 custom-scrollbar"
+                title="Mantén Ctrl presionado para seleccionar varios años"
               >
                 {anos.map(opt => (
                   <option key={opt} value={opt} className="bg-[#000022] text-slate-200">{opt}</option>
@@ -601,24 +608,22 @@ export default function BIDashboardExplorer() {
               {selectedAnos.length > 0 && (
                 <button
                   onClick={() => setSelectedAnos([])}
-                  className="absolute -top-1 -right-2 bg-rose-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] shadow-sm hover:bg-rose-400 z-10"
+                  className="absolute top-0 right-0 bg-rose-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] shadow-sm hover:bg-rose-400 z-10"
                   title="Borrar filtro"
                 >
                   ✕
                 </button>
               )}
             </div>
-            {selectedAnos.length === 0 && (
-              <span className="text-[10px] text-slate-500 absolute -bottom-4 truncate w-24 hidden md:block">Último año (Auto)</span>
-            )}
           </div>
 
-          <div className="flex items-center gap-3 bg-slate-900/50 p-2 rounded-lg border border-[#4fc3f7]/20">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Tamaño:</span>
+          {/* Filtro Tamaño */}
+          <div className="flex flex-col gap-1.5 bg-slate-900/50 p-3 rounded-lg border border-[#4fc3f7]/20">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Tamaño Empresa</span>
             <select
               value={selectedTamano}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedTamano(e.target.value)}
-              className="bg-transparent text-[#4fc3f7] text-sm font-bold outline-none cursor-pointer hover:text-[#4fc3f7]/80 transition-colors w-28 truncate"
+              className="bg-transparent text-[#4fc3f7] text-sm font-bold outline-none cursor-pointer hover:text-[#4fc3f7]/80 transition-colors w-full truncate"
             >
               <option value="TODOS" className="bg-[#000022] text-slate-200">TODOS</option>
               {tamanos.map(opt => (
@@ -627,12 +632,13 @@ export default function BIDashboardExplorer() {
             </select>
           </div>
 
-          <div className="flex items-center gap-3 bg-slate-900/50 p-2 rounded-lg border border-[#4fc3f7]/20">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Macro Sector:</span>
+          {/* Filtro Macro Sector */}
+          <div className="flex flex-col gap-1.5 bg-slate-900/50 p-3 rounded-lg border border-[#4fc3f7]/20">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Macro Sector</span>
             <select
               value={selectedMacroSector}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedMacroSector(e.target.value)}
-              className="bg-transparent text-[#4fc3f7] text-sm font-bold outline-none cursor-pointer hover:text-[#4fc3f7]/80 transition-colors w-20 truncate"
+              className="bg-transparent text-[#4fc3f7] text-sm font-bold outline-none cursor-pointer hover:text-[#4fc3f7]/80 transition-colors w-full truncate"
             >
               <option value="TODOS" className="bg-[#000022] text-slate-200">TODOS</option>
               {macroSectores.map(opt => (
@@ -641,12 +647,13 @@ export default function BIDashboardExplorer() {
             </select>
           </div>
 
-          <div className="flex items-center gap-3 bg-slate-900/50 p-2 rounded-lg border border-[#4fc3f7]/20">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">CIIU:</span>
+          {/* Filtro CIIU */}
+          <div className="flex flex-col gap-1.5 bg-slate-900/50 p-3 rounded-lg border border-[#4fc3f7]/20">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Actividad CIIU</span>
             <select
               value={selectedCiiu}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedCiiu(e.target.value)}
-              className="bg-transparent text-[#ffff00] text-sm font-bold outline-none cursor-pointer hover:text-[#ffff00]/80 transition-colors w-32 truncate"
+              className="bg-transparent text-[#ffff00] text-sm font-bold outline-none cursor-pointer hover:text-[#ffff00]/80 transition-colors w-full truncate"
             >
               <option value="TODOS" className="bg-[#000022] text-slate-200">TODOS</option>
               {ciius.map(opt => (
@@ -654,6 +661,7 @@ export default function BIDashboardExplorer() {
               ))}
             </select>
           </div>
+
         </div>
       </div>
 
