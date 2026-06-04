@@ -240,6 +240,7 @@ export default function Dashboard() {
       {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col overflow-y-auto">
         
+
         {/* TOP HEADER */}
         <header className="h-20 flex items-center justify-between px-8 border-b border-[#4fc3f7]/20 bg-[#000033]/80 backdrop-blur-md sticky top-0 z-10 shrink-0">
           <div>
@@ -253,7 +254,6 @@ export default function Dashboard() {
                 {activeTab === 'fraude' && "Auditoría y Fraude"}
                 {activeTab === 'informe' && "Reportes Inteligentes"}
               </h2>
-              <span className="text-[10px] text-[#4fc3f7] font-mono bg-[#4fc3f7]/10 px-2 py-0.5 rounded border border-[#4fc3f7]/20">API: {BACKEND_URL}</span>
             </div>
             <p className="text-sm text-slate-400">
               {activeTab === 'directorio' ? "Base de datos maestra de PYMES analizadas" : ""}
