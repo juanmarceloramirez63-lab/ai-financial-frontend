@@ -111,6 +111,13 @@ export default function Dashboard() {
   const [fraudData, setFraudData] = useState<any>(null);
   const [benchmarkData, setBenchmarkData] = useState<any>(null);
   const [matrixData, setMatrixData] = useState<any>(initialMatrixData);
+
+  // Estados de Filtros Compartidos para BI Explorador y Estadísticas Avanzadas
+  const [selectedTamano, setSelectedTamano] = useState('TODOS');
+  const [selectedCiiu, setSelectedCiiu] = useState('TODOS');
+  const [selectedMacroSector, setSelectedMacroSector] = useState('TODOS');
+  const [selectedAnos, setSelectedAnos] = useState<string[]>([]);
+  const [selectedDept, setSelectedDept] = useState('TODOS');
   
   // Estados para validación Human-in-the-Loop
   const [isValidating, setIsValidating] = useState(false);
@@ -300,11 +307,28 @@ export default function Dashboard() {
           </div>
         ) : activeTab === 'bi' ? (
           <div className="flex-1 flex flex-col overflow-y-auto">
-            <BIDashboard />
+            <BIDashboard 
+              selectedTamano={selectedTamano}
+              setSelectedTamano={setSelectedTamano}
+              selectedCiiu={selectedCiiu}
+              setSelectedCiiu={setSelectedCiiu}
+              selectedMacroSector={selectedMacroSector}
+              setSelectedMacroSector={setSelectedMacroSector}
+              selectedAnos={selectedAnos}
+              setSelectedAnos={setSelectedAnos}
+            />
           </div>
         ) : activeTab === 'stats' ? (
           <div className="flex-1 flex flex-col overflow-y-auto">
-            <StatisticalAnalysisDashboard />
+            <StatisticalAnalysisDashboard 
+              selectedDept={selectedDept}
+              setSelectedDept={setSelectedDept}
+              selectedTamano={selectedTamano}
+              setSelectedTamano={setSelectedTamano}
+              selectedYear={selectedAnos[0] || 'TODOS'}
+              setSelectedYear={(yr: string) => setSelectedAnos(yr === 'TODOS' ? [] : [yr])}
+              selectedCiiu={selectedCiiu}
+            />
           </div>
         ) : activeTab !== 'dashboard' ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">

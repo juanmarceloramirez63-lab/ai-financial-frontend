@@ -2,11 +2,10 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { BACKEND_URL } from '../lib/config';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { 
-  TrendingDown, TrendingUp, AlertTriangle, AlertCircle, 
-  HelpCircle, Percent, ShieldCheck, DollarSign, Download, 
-  Search, Sliders, ChevronDown, ChevronUp, Loader2, Sparkles
+  TrendingUp, AlertTriangle, ShieldCheck, HelpCircle, Download, 
+  Search, Sliders, Loader2, Sparkles, Filter
 } from 'lucide-react';
 
 interface StatItem {
@@ -57,7 +56,15 @@ interface CompanyItem {
   razon_social: string;
 }
 
-export default function StatisticalAnalysisDashboard() {
+export default function StatisticalAnalysisDashboard({
+  selectedDept,
+  setSelectedDept,
+  selectedTamano,
+  setSelectedTamano,
+  selectedYear,
+  setSelectedYear,
+  selectedCiiu
+}: any) {
   const [loading, setLoading] = useState(true);
   const [statsData, setStatsData] = useState<StatItem[]>([]);
   const [stressData, setStressData] = useState<StressResult | null>(null);
@@ -67,41 +74,10 @@ export default function StatisticalAnalysisDashboard() {
   const [companyDetails, setCompanyDetails] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Filtros locales para coincidir con BI Explorador
-  const [selectedDept, setSelectedDept] = useState('TODOS');
-  const [selectedTamano, setSelectedTamano] = useState('TODOS');
-  const [selectedYear, setSelectedYear] = useState('TODOS');
-
-  // Sliders del Simulador de Estrés
-  const [shockRevenue, setShockRevenue] = useState(-10);
-  const [shockCosts, setShockCosts] = useState(5);
-  const [shockExpenses, setShockExpenses] = useState(5);
-
-  // Opciones de filtros obtenidos dinámicamente del backend
-  const [filterOpts, setFilterOpts] = useState<{ departamentos: string[]; tamanos: string[]; anios: number[] }>({
-    departamentos: [],
-    tamanos: ['MICRO', 'PEQUEÑA', 'MEDIANA', 'GRANDE'],
-    anios: []
-  });
-
-  // Cargar lista de filtros al iniciar
-  useEffect(() => {
-    const fetchFilters = async () => {
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/bi/filters`);
-        if (res.ok) {
-          const data = await res.json();
-          setFilterOpts(prev => ({
-            ...prev,
-            anios: data.anios || []
-          }));
-        }
-      } catch (e) {
-        console.error("Error cargando filtros:", e);
-      }
-    };
-    fetchFilters();
-  }, []);
+  // Sliders del Simulador de Estrés (Por defecto 0% para ver situación base limpia)
+  const [shockRevenue, setShockRevenue] = useState(0);
+  const [shockCosts, setShockCosts] = useState(0);
+  const [shockExpenses, setShockExpenses] = useState(0);
 
   // Cargar datos del análisis estadístico
   const loadStats = async () => {
@@ -114,9 +90,10 @@ export default function StatisticalAnalysisDashboard() {
           expenses: shockExpenses
         }
       };
-      if (selectedDept !== 'TODOS') payload.ciudad = selectedDept; 
-      if (selectedTamano !== 'TODOS') payload.tamano = selectedTamano;
-      if (selectedYear !== 'TODOS') payload.anio = parseInt(selectedYear);
+      if (selectedDept && selectedDept !== 'TODOS') payload.ciudad = selectedDept; 
+      if (selectedTamano && selectedTamano !== 'TODOS') payload.tamano = selectedTamano;
+      if (selectedYear && selectedYear !== 'TODOS') payload.anio = parseInt(selectedYear);
+      if (selectedCiiu && selectedCiiu !== 'TODOS') payload.sector = selectedCiiu;
 
       const res = await fetch(`${BACKEND_URL}/api/bi/stats`, {
         method: 'POST',
@@ -145,11 +122,12 @@ export default function StatisticalAnalysisDashboard() {
     }
   };
 
+  // Escuchar cambios en los filtros globales vinculados
   useEffect(() => {
     loadStats();
-  }, [selectedDept, selectedTamano, selectedYear]);
+  }, [selectedDept, selectedTamano, selectedYear, selectedCiiu]);
 
-  // Ejecutar el estrés
+  // Ejecutar el estrés manual al pulsar el botón
   const handleApplyStress = () => {
     loadStats();
   };
@@ -291,63 +269,29 @@ export default function StatisticalAnalysisDashboard() {
   return (
     <div className="p-8 space-y-8 bg-[#000033] min-h-screen text-slate-200">
       
-      {/* FILTROS SUPERIORES VINCULADOS */}
-      <div className="bg-[#000022] border border-[#4fc3f7]/20 p-6 rounded-2xl shadow-xl flex flex-wrap gap-6 items-center justify-between shrink-0">
+      {/* HEADER DE FILTROS VINCULADOS GLOBALES */}
+      <div className="bg-[#000022] border border-[#4fc3f7]/20 p-5 rounded-2xl shadow-xl flex flex-wrap gap-4 items-center justify-between">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-[#4fc3f7] animate-pulse" />
-          <h3 className="font-bold text-white uppercase text-sm tracking-wider">Filtros Generales Vinculados</h3>
+          <Filter className="w-5 h-5 text-indigo-400" />
+          <h3 className="font-bold text-white uppercase text-xs tracking-wider">Filtros Activos (BI Sincronizados)</h3>
         </div>
         
-        <div className="flex flex-wrap gap-4 flex-1 justify-end">
-          {/* Ubicación / Ciudad */}
-          <div className="flex flex-col gap-1 min-w-[200px]">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Ubicación (Región/Ciudad)</span>
-            <select
-              value={selectedDept}
-              onChange={(e) => setSelectedDept(e.target.value)}
-              className="bg-[#161b22] text-[#ffff00] text-sm font-bold p-2.5 rounded-lg border border-[#4fc3f7]/20 outline-none cursor-pointer"
-            >
-              <option value="TODOS">TODAS LAS CIUDADES</option>
-              <option value="BOGOTA D.C.">BOGOTÁ D.C.</option>
-              <option value="MEDELLIN">MEDELLÍN</option>
-              <option value="CALI">CALI</option>
-              <option value="BARRANQUILLA">BARRANQUILLA</option>
-              <option value="BUCARAMANGA">BUCARAMANGA</option>
-              <option value="CARTAGENA DE INDIAS">CARTAGENA</option>
-              <option value="MANIZALES">MANIZALES</option>
-              <option value="IBAGUE">IBAGUÉ</option>
-            </select>
+        <div className="flex flex-wrap gap-6 text-xs font-bold text-slate-300">
+          <div>
+            <span className="text-slate-500 uppercase tracking-widest text-[9px] block">Departamento/Ciudad</span>
+            <span className="text-[#ffff00]">{selectedDept === 'TODOS' ? 'TODOS' : selectedDept}</span>
           </div>
-
-          {/* Tamaño */}
-          <div className="flex flex-col gap-1 min-w-[160px]">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Tamaño de Empresa</span>
-            <select
-              value={selectedTamano}
-              onChange={(e) => setSelectedTamano(e.target.value)}
-              className="bg-[#161b22] text-[#ffff00] text-sm font-bold p-2.5 rounded-lg border border-[#4fc3f7]/20 outline-none cursor-pointer"
-            >
-              <option value="TODOS">TODOS</option>
-              <option value="MICRO">MICRO</option>
-              <option value="PEQUEÑA">PEQUEÑA</option>
-              <option value="MEDIANA">MEDIANA</option>
-              <option value="GRANDE">GRANDE</option>
-            </select>
+          <div>
+            <span className="text-slate-500 uppercase tracking-widest text-[9px] block">Tamaño Empresa</span>
+            <span className="text-[#ffff00]">{selectedTamano}</span>
           </div>
-
-          {/* Año */}
-          <div className="flex flex-col gap-1 min-w-[120px]">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Año de Análisis</span>
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(e.target.value)}
-              className="bg-[#161b22] text-[#ffff00] text-sm font-bold p-2.5 rounded-lg border border-[#4fc3f7]/20 outline-none cursor-pointer"
-            >
-              <option value="TODOS">TODOS</option>
-              {filterOpts.anios.map(y => (
-                <option key={y} value={y.toString()}>{y}</option>
-              ))}
-            </select>
+          <div>
+            <span className="text-slate-500 uppercase tracking-widest text-[9px] block">Año(s)</span>
+            <span className="text-[#ffff00]">{selectedYear}</span>
+          </div>
+          <div>
+            <span className="text-slate-500 uppercase tracking-widest text-[9px] block">Sector CIIU</span>
+            <span className="text-[#ffff00]">{selectedCiiu === 'TODOS' ? 'TODOS' : selectedCiiu}</span>
           </div>
         </div>
       </div>
@@ -358,7 +302,7 @@ export default function StatisticalAnalysisDashboard() {
           alertData.vulnerabilidad_sistemica 
             ? 'bg-rose-950/30 border-rose-500/30 text-rose-200' 
             : 'bg-emerald-950/20 border-emerald-500/20 text-emerald-200'
-        } shadow-lg flex items-start gap-4`}>
+        } shadow-lg flex items-start gap-4 transition-all duration-300`}>
           {alertData.vulnerabilidad_sistemica ? (
             <AlertTriangle className="w-10 h-10 text-rose-500 shrink-0 mt-1" />
           ) : (
@@ -387,48 +331,62 @@ export default function StatisticalAnalysisDashboard() {
         </div>
       )}
 
-      {loading ? (
-        <div className="h-96 flex flex-col items-center justify-center">
-          <Loader2 className="w-12 h-12 text-[#4fc3f7] animate-spin mb-4" />
-          <p className="text-slate-400 font-bold animate-pulse">Cargando Análisis Estadístico en tiempo real...</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          
-          {/* TABLA PRINCIPAL DE TENDENCIA CENTRAL */}
-          <div className="xl:col-span-2 bg-[#161b22] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                  <TrendingUp className="w-6 h-6 text-indigo-400" />
-                  Estructura de Cuentas y Tendencia Central
-                </h3>
-                <p className="text-xs text-slate-400">Distribución de percentiles y medias ponderadas por activos/ingresos</p>
-              </div>
-              <button 
-                onClick={handleExportCSV}
-                className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-4 py-2 rounded-lg transition-colors font-medium text-xs shadow-md"
-              >
-                <Download size={14} />
-                Exportar CSV
-              </button>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        
+        {/* TABLA PRINCIPAL DE TENDENCIA CENTRAL */}
+        <div className="xl:col-span-2 bg-[#161b22] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6 relative">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <TrendingUp className="w-6 h-6 text-indigo-400" />
+                Estructura de Cuentas y Tendencia Central
+              </h3>
+              <p className="text-xs text-slate-400">Distribución de percentiles y medias ponderadas por activos/ingresos</p>
             </div>
+            <button 
+              onClick={handleExportCSV}
+              className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-4 py-2 rounded-lg transition-colors font-medium text-xs shadow-md"
+            >
+              <Download size={14} />
+              Exportar CSV
+            </button>
+          </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-slate-800 text-slate-400 uppercase font-black tracking-wider text-[10px]">
-                    <th className="py-3 px-4">Cuenta Financiera</th>
-                    <th className="py-3 px-4 text-right">Media Simple</th>
-                    <th className="py-3 px-4 text-right">Media Pond.</th>
-                    <th className="py-3 px-4 text-right text-indigo-400">Mediana</th>
-                    <th className="py-3 px-4 text-right">Percentil 25</th>
-                    <th className="py-3 px-4 text-right">Percentil 75</th>
-                    <th className="py-3 px-4 text-right">Percentil 90</th>
+          <div className="overflow-x-auto relative">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-slate-800 text-slate-400 uppercase font-black tracking-wider text-[10px]">
+                  <th className="py-3 px-4">Cuenta Financiera</th>
+                  <th className="py-3 px-4 text-right">Media Simple</th>
+                  <th className="py-3 px-4 text-right">Media Pond.</th>
+                  <th className="py-3 px-4 text-right text-indigo-400">Mediana</th>
+                  <th className="py-3 px-4 text-right">Percentil 25</th>
+                  <th className="py-3 px-4 text-right">Percentil 75</th>
+                  <th className="py-3 px-4 text-right">Percentil 90</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/50">
+                {loading ? (
+                  // Skeleton placeholders para evitar que la tabla se vea estática o desaparezca
+                  Array.from({ length: 8 }).map((_, i) => (
+                    <tr key={i} className="animate-pulse bg-slate-900/10">
+                      <td className="py-4 px-4"><div className="h-3 bg-slate-800 rounded w-44"></div></td>
+                      <td className="py-4 px-4"><div className="h-3 bg-slate-800 rounded w-20 ml-auto"></div></td>
+                      <td className="py-4 px-4"><div className="h-3 bg-slate-800 rounded w-20 ml-auto"></div></td>
+                      <td className="py-4 px-4"><div className="h-3 bg-slate-800 rounded w-20 ml-auto"></div></td>
+                      <td className="py-4 px-4"><div className="h-3 bg-slate-800 rounded w-20 ml-auto"></div></td>
+                      <td className="py-4 px-4"><div className="h-3 bg-slate-800 rounded w-20 ml-auto"></div></td>
+                      <td className="py-4 px-4"><div className="h-3 bg-slate-800 rounded w-20 ml-auto"></div></td>
+                    </tr>
+                  ))
+                ) : statsData.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-slate-500 font-bold">
+                      No se encontraron datos para los filtros seleccionados
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/50">
-                  {statsData.map((s, idx) => {
+                ) : (
+                  statsData.map((s, idx) => {
                     const isPercentage = s.id.includes('roa') || s.id.includes('roe') || s.id.includes('endeudamiento');
                     const formatter = (v: number) => isPercentage ? `${(v * 100).toFixed(1)}%` : formatCurrency(v);
                     
@@ -446,114 +404,120 @@ export default function StatisticalAnalysisDashboard() {
                         <td className="py-3 px-4 text-right font-mono text-slate-400">{formatter(s.p90)}</td>
                       </tr>
                     );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* COLUMNA DERECHA: SIMULADOR DE ESTRÉS MACRO */}
-          <div className="bg-[#161b22] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6 flex flex-col justify-between">
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                  <Sliders className="w-6 h-6 text-rose-400" />
-                  Simulador de Estrés What-If
-                </h3>
-                <p className="text-xs text-slate-400">Aplica choques porcentuales en variables agregadas de la región o sector</p>
-              </div>
-
-              {/* CONTROLES DE SHOCK */}
-              <div className="space-y-4 bg-slate-900/40 p-4 rounded-xl border border-slate-800">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Choque en Ingresos Operativos</span>
-                    <span className={`font-mono font-bold ${shockRevenue < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>{shockRevenue}%</span>
-                  </div>
-                  <input 
-                    type="range" min="-50" max="50" value={shockRevenue} 
-                    onChange={(e) => setShockRevenue(parseInt(e.target.value))}
-                    className="w-full accent-rose-500" 
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Choque en Costos de Venta</span>
-                    <span className={`font-mono font-bold ${shockCosts > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>+{shockCosts}%</span>
-                  </div>
-                  <input 
-                    type="range" min="-50" max="50" value={shockCosts} 
-                    onChange={(e) => setShockCosts(parseInt(e.target.value))}
-                    className="w-full accent-orange-500" 
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Choque en Gastos Operacionales</span>
-                    <span className={`font-mono font-bold ${shockExpenses > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>+{shockExpenses}%</span>
-                  </div>
-                  <input 
-                    type="range" min="-50" max="50" value={shockExpenses} 
-                    onChange={(e) => setShockExpenses(parseInt(e.target.value))}
-                    className="w-full accent-orange-500" 
-                  />
-                </div>
-
-                <button 
-                  onClick={handleApplyStress}
-                  className="w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg transition-colors font-bold text-xs shadow-lg shadow-rose-900/30"
-                >
-                  Recalcular Escenario de Estrés
-                </button>
-              </div>
-
-              {/* RESULTADOS DE ESTRÉS */}
-              {stressData && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-[#000022] p-4 rounded-xl border border-slate-800 text-center">
-                      <p className="text-[10px] font-black text-slate-400 uppercase">Empresas con Pérdida (Antes)</p>
-                      <p className="text-xl font-bold font-mono text-slate-300 mt-1">{stressData.resumen.con_perdidas_base}</p>
-                    </div>
-                    <div className="bg-rose-950/20 p-4 rounded-xl border border-rose-950 text-center">
-                      <p className="text-[10px] font-black text-rose-400 uppercase">Simulación Estrés (Pérdidas)</p>
-                      <p className="text-xl font-bold font-mono text-rose-500 mt-1">{stressData.resumen.con_perdidas_sim}</p>
-                    </div>
-                  </div>
-
-                  <div className="bg-rose-950/10 border border-rose-500/20 p-4 rounded-xl flex items-center justify-between">
-                    <div>
-                      <h5 className="font-bold text-sm text-white">Margen Comprometido</h5>
-                      <p className="text-[10px] text-rose-300">Empresas que entran a zona de pérdida neta</p>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-lg font-black text-rose-500 font-mono">+{stressData.resumen.nuevas_empresas_perdida}</span>
-                      <p className="text-[10px] text-slate-400">({stressData.resumen.pct_empresas_afectadas.toFixed(1)}%)</p>
-                    </div>
-                  </div>
-
-                  {/* COMPARATIVE MINI CHART */}
-                  <div className="h-44 bg-[#0f111a] rounded-xl p-2 border border-slate-800">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={stressChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                        <XAxis dataKey="name" stroke="#64748b" tick={{fill: '#64748b', fontSize: 10}} axisLine={false} tickLine={false} />
-                        <YAxis stroke="#64748b" tick={{fill: '#64748b', fontSize: 10}} axisLine={false} tickLine={false} tickFormatter={(v) => `$ ${(v/1e6).toFixed(0)}M`} />
-                        <Tooltip contentStyle={{ backgroundColor: '#0f111a', borderColor: '#334155', borderRadius: '8px', color: '#f8fafc', fontSize: 10 }} />
-                        <Legend wrapperStyle={{ fontSize: 9, paddingTop: 5 }} />
-                        <Bar dataKey="Antes" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="Después" fill="#f43f5e" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              )}
-            </div>
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
-      )}
+
+        {/* COLUMNA DERECHA: SIMULADOR DE ESTRÉS MACRO */}
+        <div className="bg-[#161b22] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6 flex flex-col justify-between relative">
+          {loading && (
+            <div className="absolute inset-0 bg-[#161b22]/50 backdrop-blur-sm z-10 flex items-center justify-center rounded-2xl">
+              <Loader2 className="w-8 h-8 text-rose-500 animate-spin" />
+            </div>
+          )}
+
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <Sliders className="w-6 h-6 text-rose-400" />
+                Simulador de Estrés What-If
+              </h3>
+              <p className="text-xs text-slate-400">Aplica choques porcentuales en variables agregadas de la región o sector</p>
+            </div>
+
+            {/* CONTROLES DE SHOCK */}
+            <div className="space-y-4 bg-slate-900/40 p-4 rounded-xl border border-slate-800">
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">Choque en Ingresos Operativos</span>
+                  <span className={`font-mono font-bold ${shockRevenue < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>{shockRevenue}%</span>
+                </div>
+                <input 
+                  type="range" min="-50" max="50" value={shockRevenue} 
+                  onChange={(e) => setShockRevenue(parseInt(e.target.value))}
+                  className="w-full accent-rose-500" 
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">Choque en Costos de Venta</span>
+                  <span className={`font-mono font-bold ${shockCosts > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>+{shockCosts}%</span>
+                </div>
+                <input 
+                  type="range" min="-50" max="50" value={shockCosts} 
+                  onChange={(e) => setShockCosts(parseInt(e.target.value))}
+                  className="w-full accent-orange-500" 
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">Choque en Gastos Operacionales</span>
+                  <span className={`font-mono font-bold ${shockExpenses > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>+{shockExpenses}%</span>
+                </div>
+                <input 
+                  type="range" min="-50" max="50" value={shockExpenses} 
+                  onChange={(e) => setShockExpenses(parseInt(e.target.value))}
+                  className="w-full accent-orange-500" 
+                />
+              </div>
+
+              <button 
+                onClick={handleApplyStress}
+                className="w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg transition-colors font-bold text-xs shadow-lg shadow-rose-900/30"
+              >
+                Recalcular Escenario de Estrés
+              </button>
+            </div>
+
+            {/* RESULTADOS DE ESTRÉS */}
+            {stressData && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-[#000022] p-4 rounded-xl border border-slate-800 text-center">
+                    <p className="text-[10px] font-black text-slate-400 uppercase">Empresas con Pérdida (Antes)</p>
+                    <p className="text-xl font-bold font-mono text-slate-300 mt-1">{stressData.resumen.con_perdidas_base}</p>
+                  </div>
+                  <div className="bg-rose-950/20 p-4 rounded-xl border border-rose-950 text-center">
+                    <p className="text-[10px] font-black text-rose-400 uppercase">Simulación Estrés (Pérdidas)</p>
+                    <p className="text-xl font-bold font-mono text-rose-500 mt-1">{stressData.resumen.con_perdidas_sim}</p>
+                  </div>
+                </div>
+
+                <div className="bg-rose-950/10 border border-rose-500/20 p-4 rounded-xl flex items-center justify-between">
+                  <div>
+                    <h5 className="font-bold text-sm text-white">Margen Comprometido</h5>
+                    <p className="text-[10px] text-rose-300">Empresas que entran a zona de pérdida neta</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-lg font-black text-rose-500 font-mono">+{stressData.resumen.nuevas_empresas_perdida}</span>
+                    <p className="text-[10px] text-slate-400">({stressData.resumen.pct_empresas_afectadas.toFixed(1)}%)</p>
+                  </div>
+                </div>
+
+                {/* COMPARATIVE MINI CHART */}
+                <div className="h-44 bg-[#0f111a] rounded-xl p-2 border border-slate-800">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={stressChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                      <XAxis dataKey="name" stroke="#64748b" tick={{fill: '#64748b', fontSize: 10}} axisLine={false} tickLine={false} />
+                      <YAxis stroke="#64748b" tick={{fill: '#64748b', fontSize: 10}} axisLine={false} tickLine={false} tickFormatter={(v) => `$ ${(v/1e6).toFixed(0)}M`} />
+                      <Tooltip contentStyle={{ backgroundColor: '#0f111a', borderColor: '#334155', borderRadius: '8px', color: '#f8fafc', fontSize: 10 }} />
+                      <Legend wrapperStyle={{ fontSize: 9, paddingTop: 5 }} />
+                      <Bar dataKey="Antes" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="Después" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* ANÁLISIS DE BRECHA */}
       <div className="bg-[#161b22] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6">

@@ -199,17 +199,42 @@ interface GeoProperties {
   divipola_n: number;
 }
 
-export default function BIDashboardExplorer() {
+export default function BIDashboardExplorer({
+  selectedTamano: propsTamano,
+  setSelectedTamano: propsSetTamano,
+  selectedCiiu: propsCiiu,
+  setSelectedCiiu: propsSetCiiu,
+  selectedMacroSector: propsMacroSector,
+  setSelectedMacroSector: propsSetMacroSector,
+  selectedAnos: propsAnos,
+  setSelectedAnos: propsSetAnos
+}: any) {
   const [metric, setMetric] = useState<MetricKey>('ingresos');
   const [level, setLevel] = useState<AnalysisLevel>('dept');
   const [tooltipContent, setTooltipContent] = useState<AggregatedData | null>(null);
   const [showAudit, setShowAudit] = useState(false);
   const [realData, setRealData] = useState<RawFinancialRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedTamano, setSelectedTamano] = useState<string>('TODOS');
-  const [selectedCiiu, setSelectedCiiu] = useState<string>('TODOS');
-  const [selectedMacroSector, setSelectedMacroSector] = useState<string>('TODOS');
-  const [selectedAnos, setSelectedAnos] = useState<string[]>([]);
+  
+  // Estados locales alternativos en caso de no recibir props
+  const [localTamano, setLocalTamano] = useState<string>('TODOS');
+  const [localCiiu, setLocalCiiu] = useState<string>('TODOS');
+  const [localMacroSector, setLocalMacroSector] = useState<string>('TODOS');
+  const [localAnos, setLocalAnos] = useState<string[]>([]);
+  
+  // Resolver estados activos
+  const selectedTamano = propsTamano !== undefined ? propsTamano : localTamano;
+  const setSelectedTamano = propsSetTamano !== undefined ? propsSetTamano : setLocalTamano;
+  
+  const selectedCiiu = propsCiiu !== undefined ? propsCiiu : localCiiu;
+  const setSelectedCiiu = propsSetCiiu !== undefined ? propsSetCiiu : setLocalCiiu;
+  
+  const selectedMacroSector = propsMacroSector !== undefined ? propsMacroSector : localMacroSector;
+  const setSelectedMacroSector = propsSetMacroSector !== undefined ? propsSetMacroSector : setLocalMacroSector;
+  
+  const selectedAnos = propsAnos !== undefined ? propsAnos : localAnos;
+  const setSelectedAnos = propsSetAnos !== undefined ? propsSetAnos : setLocalAnos;
+
   const [usingCache, setUsingCache] = useState(false);
 
   // 4. Conexión a API y Caché (Fase Producción)
