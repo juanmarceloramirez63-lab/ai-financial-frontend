@@ -18,6 +18,7 @@ import { BACKEND_URL } from '../lib/config';
 
 // ... (keep dynamic import of BIDashboard)
 const BIDashboard = dynamic(() => import('../components/BIDashboard'), { ssr: false });
+const StatisticalAnalysisDashboard = dynamic(() => import('../components/StatisticalAnalysisDashboard'), { ssr: false });
 
 // INITIAL DUMMY DATA FROM OUR PYTHON BACKEND
 const initialFinancialData = {
@@ -227,6 +228,7 @@ export default function Dashboard() {
           <NavItem icon={<LayoutDashboard size={20} />} label="Resultados Auditoría" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
           <NavItem icon={<FileSearch size={20} />} label="Analizar Nuevo Doc" active={activeTab === 'analizar'} onClick={() => { setActiveTab('analizar'); setIsValidating(false); }} />
           <NavItem icon={<Database size={20} />} label="BI Explorador" active={activeTab === 'bi'} onClick={() => setActiveTab('bi')} />
+          <NavItem icon={<TrendingUp size={20} />} label="Estadísticas e Impacto" active={activeTab === 'stats'} onClick={() => setActiveTab('stats')} />
           <NavItem icon={<Building2 size={20} />} label="Histórico Sectorial" active={activeTab === 'historico'} onClick={() => setActiveTab('historico')} />
           <NavItem icon={<AlertTriangle size={20} />} label="Alertas Fraude" active={activeTab === 'fraude'} onClick={() => setActiveTab('fraude')} />
         </nav>
@@ -251,6 +253,7 @@ export default function Dashboard() {
                 {activeTab === 'analizar' && "Analizar Nuevo Documento"}
                 {activeTab === 'historico' && "Benchmarking Sectorial"}
                 {activeTab === 'bi' && "Explorador de Inteligencia de Negocios"}
+                {activeTab === 'stats' && "Análisis Estadístico e Impacto Financiero"}
                 {activeTab === 'fraude' && "Auditoría y Fraude"}
                 {activeTab === 'informe' && "Reportes Inteligentes"}
               </h2>
@@ -260,6 +263,7 @@ export default function Dashboard() {
               {activeTab === 'dashboard' ? "Datos extraídos y analizados en tiempo real por IA" : ""}
               {activeTab === 'analizar' ? "Sube tus estados financieros aquí" : ""}
               {activeTab === 'bi' ? "Procesamiento de Big Data en tiempo real de toda tu base de datos" : ""}
+              {activeTab === 'stats' ? "Estadísticas descriptivas, benchmarking por desviaciones estándar y simulación de estrés macroeconómico" : ""}
               {(activeTab === 'historico' || activeTab === 'fraude' || activeTab === 'informe') ? "Módulo en construcción (Fases 2 y 3)" : ""}
             </p>
           </div>
@@ -297,6 +301,10 @@ export default function Dashboard() {
         ) : activeTab === 'bi' ? (
           <div className="flex-1 flex flex-col overflow-y-auto">
             <BIDashboard />
+          </div>
+        ) : activeTab === 'stats' ? (
+          <div className="flex-1 flex flex-col overflow-y-auto">
+            <StatisticalAnalysisDashboard />
           </div>
         ) : activeTab !== 'dashboard' ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
