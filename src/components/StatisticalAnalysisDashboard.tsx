@@ -8,6 +8,8 @@ import {
   Search, Sliders, Loader2, Sparkles, Filter
 } from 'lucide-react';
 
+import IntegralFinancialDashboard from './IntegralFinancialDashboard';
+
 interface StatItem {
   id: string;
   name: string;
@@ -98,7 +100,8 @@ export default function StatisticalAnalysisDashboard({
       const res = await fetch(`${BACKEND_URL}/api/bi/stats`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        cache: 'no-store'
       });
 
       if (res.ok) {
@@ -178,7 +181,7 @@ export default function StatisticalAnalysisDashboard({
     }
     
     try {
-      const res = await fetch(`${BACKEND_URL}/api/clientes`);
+      const res = await fetch(`/api/clientes`);
       if (res.ok) {
         const data = await res.json();
         const found = data.clientes?.find((c: any) => c.nit === nit);
@@ -267,8 +270,20 @@ export default function StatisticalAnalysisDashboard({
   }, [stressData]);
 
   return (
-    <div className="p-8 space-y-8 bg-[#000033] min-h-screen text-slate-200">
+    <div className="p-4 md:p-8 space-y-8 bg-[#000033] min-h-screen text-slate-200">
       
+      {/* 1. DASHBOARD DE ANÁLISIS FINANCIERO INTEGRAL (SUPER PROMPT COMPONENTE PRINCIPAL) */}
+      <IntegralFinancialDashboard />
+
+      {/* SEPARADOR EJECUTIVO */}
+      <div className="flex items-center gap-4 my-8">
+        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#4fc3f7]/40 to-transparent"></div>
+        <span className="text-xs font-black uppercase tracking-widest text-[#4fc3f7] bg-[#000022] px-4 py-1.5 rounded-full border border-[#4fc3f7]/30 shadow-md">
+          Módulos Complementarios: Tendencia Central & Simulador de Estrés
+        </span>
+        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#4fc3f7]/40 to-transparent"></div>
+      </div>
+
       {/* HEADER DE FILTROS VINCULADOS GLOBALES */}
       <div className="bg-[#000022] border border-[#4fc3f7]/20 p-5 rounded-2xl shadow-xl flex flex-wrap gap-4 items-center justify-between">
         <div className="flex items-center gap-2">

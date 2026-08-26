@@ -14,7 +14,7 @@ export default function ClientDirectory({ onSelectClient }: { onSelectClient: (c
     try {
       // Intentamos cargar desde un endpoint del backend (que crearemos luego si es necesario)
       // Por ahora, como es frontend, simulamos la llamada. En producción deberías tener un GET /api/clientes
-      const response = await fetch(`${BACKEND_URL}/api/clientes`);
+      const response = await fetch(`/api/clientes`);
       if (!response.ok) {
         throw new Error('Endpoint /api/clientes no disponible');
       }

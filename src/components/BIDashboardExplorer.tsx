@@ -144,30 +144,27 @@ type AnalysisLevel = 'dept' | 'city';
 // 3. Datos Maestros (Mock Raw Data)
 const MOCK_RAW_DATA: RawFinancialRecord[] = [
   // Cobertura Nacional Expandida
-  { departamento: "Cundinamarca", ciudad: "Bogotá", empresas: 4520, activos: 85400000000, ingresos: 62100000000, utilidad: 5400000000, patrimonio: 42000000000, pasivos: 43400000000, tamano: "GRANDE", ciiu: "C1011" },
-  { departamento: "Antioquia", ciudad: "Medellín", empresas: 2800, activos: 58200000000, ingresos: 42500000000, utilidad: 2900000000, patrimonio: 28000000000, pasivos: 30200000000, tamano: "MEDIANA", ciiu: "G4690" },
-  { departamento: "Valle del Cauca", ciudad: "Cali", empresas: 1650, activos: 28100000000, ingresos: 19400000000, utilidad: 1100000000, patrimonio: 13400000000, pasivos: 14700000000, tamano: "PEQUEÑA", ciiu: "F4290" },
-  { departamento: "Atlántico", ciudad: "Barranquilla", empresas: 1100, activos: 16500000000, ingresos: 10100000000, utilidad: 750000000, patrimonio: 8200000000, pasivos: 8300000000, tamano: "MICRO", ciiu: "A0114" },
-  { departamento: "N/A", ciudad: "Manizales", empresas: 450, activos: 8500000000, ingresos: 5100000000, utilidad: 250000000, patrimonio: 4100000000, pasivos: 4400000000, tamano: "PEQUEÑA", ciiu: "M7310" },
-  { departamento: "Santander", ciudad: "Bucaramanga", empresas: 820, activos: 11400000000, ingresos: 7500000000, utilidad: 350000000, patrimonio: 5100000000, pasivos: 6300000000, tamano: "MEDIANA", ciiu: "C3290" },
-  { departamento: "Huila", ciudad: "Neiva", empresas: 380, activos: 4200000000, ingresos: 3100000000, utilidad: 120000000, patrimonio: 2100000000, pasivos: 2100000000, tamano: "MICRO", ciiu: "G4690" },
-  { departamento: "Bolívar", ciudad: "Cartagena", empresas: 920, activos: 12400000000, ingresos: 8500000000, utilidad: 410000000, patrimonio: 6100000000, pasivos: 6300000000, tamano: "GRANDE", ciiu: "F4290" },
-  { departamento: "Nariño", ciudad: "Pasto", empresas: 310, activos: 3100000000, ingresos: 2100000000, utilidad: 90000000, patrimonio: 1500000000, pasivos: 1600000000 },
-  { departamento: "Magdalena", ciudad: "Santa Marta", empresas: 440, activos: 5200000000, ingresos: 4100000000, utilidad: 180000000, patrimonio: 2600000000, pasivos: 2600000000 },
-  { departamento: "Meta", ciudad: "Villavicencio", empresas: 510, activos: 6100000000, ingresos: 5200000000, utilidad: 210000000, patrimonio: 3100000000, pasivos: 3000000000 },
-  { departamento: "Casanare", ciudad: "Yopal", empresas: 220, activos: 2100000000, ingresos: 1800000000, utilidad: 60000000, patrimonio: 1100000000, pasivos: 1000000000 },
-  { departamento: "Cauca", ciudad: "Popayán", empresas: 280, activos: 2800000000, ingresos: 2100000000, utilidad: 80000000, patrimonio: 1400000000, pasivos: 1400000000 },
-  { departamento: "N/A", ciudad: "Quibdó", empresas: 110, activos: 1100000000, ingresos: 800000000, utilidad: 30000000, patrimonio: 550000000, pasivos: 550000000 },
-  { departamento: "Chocó", ciudad: "Istmina", empresas: 45, activos: 450000000, ingresos: 320000000, utilidad: 12000000, patrimonio: 225000000, pasivos: 225000000 },
-  { departamento: "Boyacá", ciudad: "Tunja", empresas: 350, activos: 3500000000, ingresos: 2500000000, utilidad: 110000000, patrimonio: 1750000000, pasivos: 1750000000 },
-  { departamento: "Amazonas", ciudad: "Leticia", empresas: 80, activos: 850000000, ingresos: 620000000, utilidad: 25000000, patrimonio: 420000000, pasivos: 430000000 },
-  { departamento: "Tolima", ciudad: "Ibagué", empresas: 620, activos: 7100000000, ingresos: 5400000000, utilidad: 280000000, patrimonio: 3500000000, pasivos: 3600000000 },
-  { departamento: "Norte de Santander", ciudad: "Cúcuta", empresas: 710, activos: 8200000000, ingresos: 6100000000, utilidad: 310000000, patrimonio: 4100000000, pasivos: 4100000000 },
-  { departamento: "Arauca", ciudad: "Arauca", empresas: 95, activos: 950000000, ingresos: 710000000, utilidad: 32000000, patrimonio: 475000000, pasivos: 475000000 },
-  { departamento: "La Guajira", ciudad: "Riohacha", empresas: 180, activos: 1800000000, ingresos: 1400000000, utilidad: 52000000, patrimonio: 900000000, pasivos: 900000000 },
-  { departamento: "San Andrés", ciudad: "San Andrés", empresas: 140, activos: 2400000000, ingresos: 1900000000, utilidad: 110000000, patrimonio: 1200000000, pasivos: 1200000000 },
-  // Fallo de coincidencia intencional para auditoría
-  { departamento: "Desconocido", ciudad: "CiudadInexistente", empresas: 10, activos: 100000000, ingresos: 50000000, utilidad: 5000000, patrimonio: 50000000, pasivos: 50000000 },
+  { departamento: "Cundinamarca", ciudad: "Bogotá", empresas: 4520, activos: 85400000000, ingresos: 62100000000, utilidad: 5400000000, patrimonio: 42000000000, pasivos: 43400000000, tamano: "GRANDE", ciiu: "C1011", ano: "2024" },
+  { departamento: "Antioquia", ciudad: "Medellín", empresas: 2800, activos: 58200000000, ingresos: 42500000000, utilidad: 2900000000, patrimonio: 28000000000, pasivos: 30200000000, tamano: "MEDIANA", ciiu: "G4690", ano: "2024" },
+  { departamento: "Valle del Cauca", ciudad: "Cali", empresas: 1650, activos: 28100000000, ingresos: 19400000000, utilidad: 1100000000, patrimonio: 13400000000, pasivos: 14700000000, tamano: "PEQUEÑA", ciiu: "F4290", ano: "2024" },
+  { departamento: "Atlántico", ciudad: "Barranquilla", empresas: 1100, activos: 16500000000, ingresos: 10100000000, utilidad: 750000000, patrimonio: 8200000000, pasivos: 8300000000, tamano: "MICRO", ciiu: "A0114", ano: "2024" },
+  { departamento: "Caldas", ciudad: "Manizales", empresas: 450, activos: 8500000000, ingresos: 5100000000, utilidad: 250000000, patrimonio: 4100000000, pasivos: 4400000000, tamano: "PEQUEÑA", ciiu: "M7310", ano: "2024" },
+  { departamento: "Santander", ciudad: "Bucaramanga", empresas: 820, activos: 11400000000, ingresos: 7500000000, utilidad: 350000000, patrimonio: 5100000000, pasivos: 6300000000, tamano: "MEDIANA", ciiu: "C3290", ano: "2024" },
+  { departamento: "Huila", ciudad: "Neiva", empresas: 380, activos: 4200000000, ingresos: 3100000000, utilidad: 120000000, patrimonio: 2100000000, pasivos: 2100000000, tamano: "MICRO", ciiu: "G4690", ano: "2024" },
+  { departamento: "Bolívar", ciudad: "Cartagena", empresas: 920, activos: 12400000000, ingresos: 8500000000, utilidad: 410000000, patrimonio: 6100000000, pasivos: 6300000000, tamano: "GRANDE", ciiu: "F4290", ano: "2024" },
+  { departamento: "Nariño", ciudad: "Pasto", empresas: 310, activos: 3100000000, ingresos: 2100000000, utilidad: 90000000, patrimonio: 1500000000, pasivos: 1600000000, ano: "2024" },
+  { departamento: "Magdalena", ciudad: "Santa Marta", empresas: 440, activos: 5200000000, ingresos: 4100000000, utilidad: 180000000, patrimonio: 2600000000, pasivos: 2600000000, ano: "2024" },
+  { departamento: "Meta", ciudad: "Villavicencio", empresas: 510, activos: 6100000000, ingresos: 5200000000, utilidad: 210000000, patrimonio: 3100000000, pasivos: 3000000000, ano: "2024" },
+  { departamento: "Casanare", ciudad: "Yopal", empresas: 220, activos: 2100000000, ingresos: 1800000000, utilidad: 60000000, patrimonio: 1100000000, pasivos: 1000000000, ano: "2024" },
+  { departamento: "Cauca", ciudad: "Popayán", empresas: 280, activos: 2800000000, ingresos: 2100000000, utilidad: 80000000, patrimonio: 1400000000, pasivos: 1400000000, ano: "2024" },
+  { departamento: "Chocó", ciudad: "Quibdó", empresas: 110, activos: 1100000000, ingresos: 800000000, utilidad: 30000000, patrimonio: 550000000, pasivos: 550000000, ano: "2024" },
+  { departamento: "Boyacá", ciudad: "Tunja", empresas: 350, activos: 3500000000, ingresos: 2500000000, utilidad: 110000000, patrimonio: 1750000000, pasivos: 1750000000, ano: "2024" },
+  { departamento: "Amazonas", ciudad: "Leticia", empresas: 80, activos: 850000000, ingresos: 620000000, utilidad: 25000000, patrimonio: 420000000, pasivos: 430000000, ano: "2024" },
+  { departamento: "Tolima", ciudad: "Ibagué", empresas: 620, activos: 7100000000, ingresos: 5400000000, utilidad: 280000000, patrimonio: 3500000000, pasivos: 3600000000, ano: "2024" },
+  { departamento: "Norte de Santander", ciudad: "Cúcuta", empresas: 710, activos: 8200000000, ingresos: 6100000000, utilidad: 310000000, patrimonio: 4100000000, pasivos: 4100000000, ano: "2024" },
+  { departamento: "Arauca", ciudad: "Arauca", empresas: 95, activos: 950000000, ingresos: 710000000, utilidad: 32000000, patrimonio: 475000000, pasivos: 475000000, ano: "2024" },
+  { departamento: "La Guajira", ciudad: "Riohacha", empresas: 180, activos: 1800000000, ingresos: 1400000000, utilidad: 52000000, patrimonio: 900000000, pasivos: 900000000, ano: "2024" },
+  { departamento: "San Andrés", ciudad: "San Andrés", empresas: 140, activos: 2400000000, ingresos: 1900000000, utilidad: 110000000, patrimonio: 1200000000, pasivos: 1200000000, ano: "2024" }
 ];
 
 const METRIC_OPTIONS: MetricOption[] = [
@@ -244,7 +241,7 @@ export default function BIDashboardExplorer({
     const fetchData = async () => {
       try {
         const backendUrl = BACKEND_URL;
-        const response = await fetch(`${backendUrl}/api/bi/raw?limit=200000`);
+        const response = await fetch(`${backendUrl}/api/bi/raw?limit=200000`, { cache: 'no-store' });
         if (!response.ok) throw new Error("API falló");
         
         const data = await response.json();
@@ -296,19 +293,31 @@ export default function BIDashboardExplorer({
     const c = new Set<string>();
     const m = new Set<string>();
     const a = new Set<string>();
+    
+    const cleanYear = (yr: any): string => {
+      if (!yr || yr === 'N/A') return '';
+      const s = String(yr).trim();
+      if (s.length === 5 && s.endsWith('1')) return s.slice(0, 4);
+      return s;
+    };
+
     realData.forEach(d => {
       if (d.tamano && d.tamano !== 'N/A') t.add(d.tamano);
       if (d.ciiu && d.ciiu !== 'N/A') {
         c.add(d.ciiu);
         m.add(d.ciiu.charAt(0).toUpperCase());
       }
-      if (d.ano && d.ano !== 'N/A') a.add(d.ano);
+      const y = cleanYear(d.ano);
+      if (y && y !== '0') {
+        a.add(y);
+      }
     });
+
     return {
       tamanos: Array.from(t).sort(),
       ciius: Array.from(c).sort(),
       macroSectores: Array.from(m).sort(),
-      anos: Array.from(a).sort((x, y) => Number(y) - Number(x)) // Sort descending
+      anos: Array.from(a).sort((x, y) => Number(y) - Number(x)) // Sort descending (2024, 2023, ..., 2015)
     };
   }, [realData]);
 
@@ -324,24 +333,23 @@ export default function BIDashboardExplorer({
       data = data.filter(d => d.ciiu && d.ciiu.charAt(0).toUpperCase() === selectedMacroSector);
     }
     
-    // Filter by selected years first
+    const cleanYear = (yr: any): string => {
+      if (!yr || yr === 'N/A') return '';
+      const s = String(yr).trim();
+      if (s.length === 5 && s.endsWith('1')) return s.slice(0, 4);
+      return s;
+    };
+
+    // Filter by selected years if any
     if (selectedAnos.length > 0) {
-      data = data.filter(d => d.ano && selectedAnos.includes(d.ano));
-      // CRITICAL: For the main dashboard, if multiple years are selected, we must only use the LATEST year
-      // to avoid summing up balance sheet items (Activos/Pasivos) across different years for the same company.
-      // This replicates the logic from app_bi.py: "Usar solo el año más reciente para evitar duplicar montos"
-      const maxYear = Math.max(...selectedAnos.map(Number));
-      data = data.filter(d => d.ano && Number(d.ano) === maxYear);
-    } else {
-      // If no years selected, default to the most recent year available in the dataset
-      if (anos.length > 0) {
-        const maxYear = Math.max(...anos.map(Number));
-        data = data.filter(d => d.ano && Number(d.ano) === maxYear);
-      }
+      data = data.filter(d => {
+        const y = cleanYear(d.ano);
+        return selectedAnos.includes(y);
+      });
     }
     
     return data;
-  }, [realData, selectedTamano, selectedCiiu, selectedMacroSector, selectedAnos, anos]);
+  }, [realData, selectedTamano, selectedCiiu, selectedMacroSector, selectedAnos]);
 
   // 4. Lógica de Auditoría de Datos
   const auditReport = useMemo(() => {
@@ -397,7 +405,7 @@ export default function BIDashboardExplorer({
       let parentName = "";
       let coords: [number, number] | undefined = undefined;
 
-      // --- LÓGICA DE AGREGACIÓN "TRIPLE SALTO" ---
+      // --- LÓGICA DE AGREGACIÓN "TRIPLE SALTO" MEJORADA ---
       if (DEPT_TO_DIVIPOLA[normDeptInput]) {
         resolvedDeptId = DEPT_TO_DIVIPOLA[normDeptInput];
         resolvedDeptName = record.departamento;
@@ -410,9 +418,32 @@ export default function BIDashboardExplorer({
         parentName = inferredDept;
         if (level === 'city') coords = CITY_COORDINATES[normCityInput];
       } else {
-        resolvedDeptId = "00";
-        resolvedDeptName = "No Mapeado";
-        parentName = "Sin Categorizar";
+        // Intentar separar ciudad compuesta (ej: "bello antioquia" o "cali valle")
+        const cityParts = normCityInput.split(' ');
+        let foundDivipola = "";
+        let foundName = "";
+        for (const part of cityParts) {
+          if (DEPT_TO_DIVIPOLA[part]) {
+            foundDivipola = DEPT_TO_DIVIPOLA[part];
+            foundName = part.toUpperCase();
+            break;
+          }
+          if (CITY_TO_DEPT_MAP[part]) {
+            const inf = CITY_TO_DEPT_MAP[part];
+            foundDivipola = DEPT_TO_DIVIPOLA[normalizeName(inf)] || "";
+            foundName = inf;
+            break;
+          }
+        }
+        if (foundDivipola) {
+          resolvedDeptId = foundDivipola;
+          resolvedDeptName = foundName;
+          parentName = foundName;
+        } else {
+          resolvedDeptId = "00";
+          resolvedDeptName = "No Mapeado";
+          parentName = "Sin Categorizar";
+        }
       }
 
       // Definir ID Final basado en el Nivel de Análisis
@@ -460,6 +491,11 @@ export default function BIDashboardExplorer({
   const leakagePercentage = useMemo(() => {
     const total = activeData.reduce((a, b) => a + b[metric], 0);
     return total > 0 ? (unmappedValue / total) * 100 : 0;
+  }, [unmappedValue, activeData, metric]);
+
+  const coveragePercentage = useMemo(() => {
+    const total = activeData.reduce((a, b) => a + b[metric], 0);
+    return total > 0 ? (1 - (unmappedValue / total)) * 100 : 0;
   }, [unmappedValue, activeData, metric]);
 
   const stopProcess = leakagePercentage > 15;
@@ -614,32 +650,24 @@ export default function BIDashboardExplorer({
 
           {/* Filtro Año */}
           <div className="flex flex-col gap-1.5 bg-slate-900/50 p-3 rounded-lg border border-[#4fc3f7]/20 relative">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Año(s)</span>
-            <div className="relative flex items-center w-full">
-              <select
-                multiple
-                value={selectedAnos}
-                onChange={(e) => {
-                  const options = Array.from(e.target.selectedOptions, option => option.value);
-                  setSelectedAnos(options);
-                }}
-                className="bg-transparent text-[#ffff00] text-xs font-bold outline-none cursor-pointer hover:text-[#ffff00]/80 transition-colors w-full h-8 custom-scrollbar"
-                title="Mantén Ctrl presionado para seleccionar varios años"
-              >
-                {anos.map(opt => (
-                  <option key={opt} value={opt} className="bg-[#000022] text-slate-200">{opt}</option>
-                ))}
-              </select>
-              {selectedAnos.length > 0 && (
-                <button
-                  onClick={() => setSelectedAnos([])}
-                  className="absolute top-0 right-0 bg-rose-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] shadow-sm hover:bg-rose-400 z-10"
-                  title="Borrar filtro"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Año de Análisis</span>
+            <select
+              value={selectedAnos.length === 1 ? selectedAnos[0] : (selectedAnos.length === 0 ? 'TODOS' : selectedAnos[0])}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                const val = e.target.value;
+                if (val === 'TODOS') {
+                  setSelectedAnos([]);
+                } else {
+                  setSelectedAnos([val]);
+                }
+              }}
+              className="bg-transparent text-[#ffff00] text-sm font-bold outline-none cursor-pointer hover:text-[#ffff00]/80 transition-colors w-full"
+            >
+              <option value="TODOS" className="bg-[#000022] text-slate-200">TODOS LOS AÑOS (SERIE COMPLETA)</option>
+              {anos.map(opt => (
+                <option key={opt} value={opt} className="bg-[#000022] text-slate-200">AÑO {opt}</option>
+              ))}
+            </select>
           </div>
 
           {/* Filtro Tamaño */}
@@ -705,7 +733,7 @@ export default function BIDashboardExplorer({
               <div className="w-2 h-2 bg-emerald-500 rounded-full" />
               <div>
                 <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest leading-none">Cobertura de Geointeligencia</p>
-                <p className="text-lg font-mono font-black text-white">{((1 - (unmappedValue / activeData.reduce((a, b) => a + (b[metric] || 0), 0))) * 100).toFixed(1)}%</p>
+                <p className="text-lg font-mono font-black text-white">{coveragePercentage.toFixed(1)}%</p>
               </div>
             </div>
           </div>
