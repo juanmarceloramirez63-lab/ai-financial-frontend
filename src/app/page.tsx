@@ -118,6 +118,7 @@ export default function Dashboard() {
   const [selectedMacroSector, setSelectedMacroSector] = useState('TODOS');
   const [selectedAnos, setSelectedAnos] = useState<string[]>([]);
   const [selectedDept, setSelectedDept] = useState('TODOS');
+  const [selectedCiudad, setSelectedCiudad] = useState('TODOS');
   
   // Estados para validación Human-in-the-Loop
   const [isValidating, setIsValidating] = useState(false);
@@ -316,6 +317,8 @@ export default function Dashboard() {
               setSelectedMacroSector={setSelectedMacroSector}
               selectedAnos={selectedAnos}
               setSelectedAnos={setSelectedAnos}
+              selectedCiudad={selectedCiudad}
+              setSelectedCiudad={setSelectedCiudad}
             />
           </div>
         ) : activeTab === 'stats' ? (

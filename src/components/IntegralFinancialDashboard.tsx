@@ -1,13 +1,15 @@
-"use client";
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   DollarSign, TrendingUp, TrendingDown, Percent, Compass, Award, 
   Filter, Calendar, Download, RefreshCw, AlertTriangle, ShieldCheck, 
   Info, ChevronRight, ChevronDown, CheckCircle2, Building2, Search,
-  FileSpreadsheet, Printer, BarChart3, PieChart, Activity, Zap
+  FileSpreadsheet, Printer, BarChart3, PieChart, Activity, Zap,
+  Shield, User, LogOut, KeyRound, Lock
 } from 'lucide-react';
 import { BACKEND_URL } from '../lib/config';
+import { useAuth, UserRole } from '../lib/AuthContext';
+import AuthModal from './AuthModal';
+import UserManagementModal from './UserManagementModal';
 
 // Componente Semicircular Gauge Profesional (SVG Puro con Aguja y Zonas de Rendimiento)
 interface GaugeProps {
@@ -218,14 +220,20 @@ export default function IntegralFinancialDashboard() {
   const [data, setData] = useState<any>(null);
   const [filtersList, setFiltersList] = useState<any>(null);
 
+  // Integración de Autenticación y Roles (RBAC)
+  const { user, profile, isSuperAdmin, signOut, loading: authLoading } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showUserModal, setShowUserModal] = useState(false);
+
   // Estados de Filtros
   const [anoInicio, setAnoInicio] = useState(2015);
-  const [anoFin, setAnoFin] = useState(2024);
+  const [anoFin, setAnoFin] = useState(2025);
   const [selectedEmpresa, setSelectedEmpresa] = useState<string>("PELANAS SAS");
   const [selectedEmpresaNit, setSelectedEmpresaNit] = useState<string>("800000313");
   const [selectedSector, setSelectedSector] = useState<string>("TODOS");
   const [selectedTamano, setSelectedTamano] = useState<string>("TODOS");
   const [selectedDepto, setSelectedDepto] = useState<string>("TODOS");
+  const [selectedCiudad, setSelectedCiudad] = useState<string>("TODOS");
   const compararCon = "Base de Datos del Sector";
   const [moneda, setMoneda] = useState<string>("COP");
   const [companySearch, setCompanySearch] = useState<string>("");
@@ -240,6 +248,31 @@ export default function IntegralFinancialDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeGaugeCategory, setActiveGaugeCategory] = useState<string>("TODOS");
   const [selectedEvolSeries, setSelectedEvolSeries] = useState<number>(0);
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowCompanyDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Años disponibles
+  const availableYears: number[] = useMemo(() => {
+    return filtersList?.anios || [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025];
+  }, [filtersList]);
+
+  // Ciudades disponibles dinámicamente filtradas por departamento seleccionado
+  const availableCiudades = useMemo(() => {
+    if (!filtersList) return [];
+    if (selectedDepto !== "TODOS" && filtersList.ciudades_por_departamento && filtersList.ciudades_por_departamento[selectedDepto]) {
+      return filtersList.ciudades_por_departamento[selectedDepto];
+    }
+    return filtersList.ciudades || [];
+  }, [filtersList, selectedDepto]);
 
   // Cargar lista de filtros disponibles (años, empresas, sectores, ciudades)
   useEffect(() => {
@@ -269,6 +302,7 @@ export default function IntegralFinancialDashboard() {
         sector: selectedSector === "TODOS" ? null : selectedSector,
         tamano: selectedTamano === "TODOS" ? null : selectedTamano,
         departamento: selectedDepto === "TODOS" ? null : selectedDepto,
+        ciudad: selectedCiudad === "TODOS" ? null : selectedCiudad,
         comparar_con: "Base de Datos del Sector"
       };
 
@@ -294,7 +328,7 @@ export default function IntegralFinancialDashboard() {
 
   useEffect(() => {
     fetchDashboardData();
-  }, [anoInicio, anoFin, selectedEmpresa, selectedSector, selectedTamano, selectedDepto]);
+  }, [anoInicio, anoFin, selectedEmpresa, selectedSector, selectedTamano, selectedDepto, selectedCiudad]);
 
   // Manejo de cambio de rango de años respetando máximo 10 años
   const handleAnoInicioChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -315,12 +349,13 @@ export default function IntegralFinancialDashboard() {
 
   const handleResetFilters = () => {
     setAnoInicio(2015);
-    setAnoFin(2024);
+    setAnoFin(2025);
     setSelectedEmpresa("PELANAS SAS");
     setSelectedEmpresaNit("800000313");
     setSelectedSector("TODOS");
     setSelectedTamano("TODOS");
     setSelectedDepto("TODOS");
+    setSelectedCiudad("TODOS");
     setMoneda("COP");
   };
 
@@ -337,8 +372,22 @@ export default function IntegralFinancialDashboard() {
     setShowCompanyDropdown(false);
   };
 
-  // Empresas filtradas para el buscador
-  const companiesList = filtersList?.empresas || [];
+  const handleCompanySelect = (name: string, nit?: string) => {
+    handleSelectCompany(nit ? { razon_social: name, nit } : name);
+  };
+
+  // Empresas filtradas para el buscador con restricción de permisos por rol
+  const rawCompaniesList = filtersList?.empresas || [];
+  const companiesList = useMemo(() => {
+    if (profile?.rol === 'cliente' && profile.nits_permitidos && profile.nits_permitidos.length > 0) {
+      // Filtrar estrictamente solo para los NITs asignados al cliente
+      return rawCompaniesList.filter((c: any) => {
+        const nit = typeof c === 'object' ? String(c.nit || '') : '';
+        return profile.nits_permitidos.includes(nit);
+      });
+    }
+    return rawCompaniesList;
+  }, [rawCompaniesList, profile]);
   const filteredCompanies = useMemo(() => {
     if (!companiesList.length) return [];
     if (!companySearch) return companiesList.slice(0, 50);
@@ -357,7 +406,7 @@ export default function IntegralFinancialDashboard() {
     if (selectedSector && selectedSector !== "TODOS") count++;
     if (selectedTamano && selectedTamano !== "TODOS") count++;
     if (selectedDepto && selectedDepto !== "TODOS") count++;
-    if (anoInicio !== 2015 || anoFin !== 2024) count++;
+    if (anoInicio !== 2015 || anoFin !== 2025) count++;
     return count;
   }, [selectedEmpresa, selectedSector, selectedTamano, selectedDepto, anoInicio, anoFin]);
 
@@ -561,6 +610,72 @@ export default function IntegralFinancialDashboard() {
             <Download className="w-4 h-4" />
             <span>Exportar</span>
           </button>
+
+          {/* PERFIL DE USUARIO Y GESTIÓN DE ROLES (RBAC) */}
+          <div className="flex items-center gap-2 pl-2 border-l border-slate-700">
+            {user ? (
+              <div className="flex items-center gap-2">
+                {/* Badge de Rol */}
+                <div className="flex flex-col items-end">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-xs text-white truncate max-w-[140px]">
+                      {profile?.nombre_completo || user.email?.split('@')[0]}
+                    </span>
+                    {profile?.rol === 'super_admin' && (
+                      <span className="px-1.5 py-0.2 text-[9px] font-black uppercase bg-purple-500/30 text-purple-300 border border-purple-400/40 rounded">
+                        👑 Super Admin
+                      </span>
+                    )}
+                    {profile?.rol === 'analista' && (
+                      <span className="px-1.5 py-0.2 text-[9px] font-black uppercase bg-blue-500/30 text-blue-300 border border-blue-400/40 rounded">
+                        💼 Analista
+                      </span>
+                    )}
+                    {profile?.rol === 'cliente' && (
+                      <span className="px-1.5 py-0.2 text-[9px] font-black uppercase bg-emerald-500/30 text-emerald-300 border border-emerald-400/40 rounded">
+                        🏢 Cliente
+                      </span>
+                    )}
+                    {profile?.rol === 'demo' && (
+                      <span className="px-1.5 py-0.2 text-[9px] font-black uppercase bg-amber-500/30 text-amber-300 border border-amber-400/40 rounded">
+                        👀 Demo
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-mono">{user.email}</span>
+                </div>
+
+                {/* Botón Gestión de Usuarios (Exclusivo Super Admin) */}
+                {isSuperAdmin && (
+                  <button
+                    onClick={() => setShowUserModal(true)}
+                    className="flex items-center gap-1 bg-purple-600 hover:bg-purple-500 text-white px-3 py-2 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95 border border-purple-400/30"
+                    title="Panel de Super Administrador para gestionar roles y permisos"
+                  >
+                    <Shield className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Usuarios</span>
+                  </button>
+                )}
+
+                {/* Botón Cerrar Sesión */}
+                <button
+                  onClick={signOut}
+                  className="p-2 text-slate-400 hover:text-rose-400 bg-[#112240] hover:bg-rose-950/40 border border-slate-700 rounded-lg transition-colors"
+                  title="Cerrar sesión"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95"
+              >
+                <Lock className="w-4 h-4" />
+                <span>Iniciar Sesión</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -615,7 +730,11 @@ export default function IntegralFinancialDashboard() {
               </div>
 
               <div className="text-[11px] text-slate-400">
-                Ubicación: <span className="text-slate-200">{info.departamento || info.ciudad || 'Colombia'}</span>
+                Ubicación: <span className="text-slate-200">{
+                  info.ciudad && info.departamento && info.ciudad !== info.departamento 
+                    ? `${info.ciudad}, ${info.departamento}` 
+                    : (info.ciudad || info.departamento || 'Colombia')
+                }</span>
               </div>
 
               <div className="text-[11px] text-slate-400">
@@ -649,9 +768,9 @@ export default function IntegralFinancialDashboard() {
             </div>
 
             {/* 2. FILTRO DE EMPRESA / NIT DIRECTO EN EL PANEL LATERAL */}
-            <div className="space-y-1.5 pt-1">
+            <div className="space-y-1.5 pt-1" ref={dropdownRef}>
               <label className="text-[11px] font-bold text-slate-700 uppercase tracking-tight block">
-                Buscar / Seleccionar Empresa ({filtersList?.total_empresas || 30217} empresas)
+                Buscar / Seleccionar Empresa ({filtersList?.total_empresas || 30151} empresas)
               </label>
               <div className="relative">
                 <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400 pointer-events-none" />
@@ -659,34 +778,53 @@ export default function IntegralFinancialDashboard() {
                   type="text"
                   placeholder="Filtrar por NIT o Nombre..."
                   value={companySearch}
-                  onChange={(e) => setCompanySearch(e.target.value)}
+                  onChange={(e) => {
+                    setCompanySearch(e.target.value);
+                    setShowCompanyDropdown(true);
+                  }}
+                  onFocus={() => setShowCompanyDropdown(true)}
                   className="w-full pl-8 pr-2.5 py-1.5 bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 />
               </div>
               <select
                 value={selectedEmpresa}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === "TODAS") {
-                    handleSelectCompany("TODAS");
-                  } else {
-                    const found = filteredCompanies.find((c: any) => (typeof c === 'string' ? c : c.razon_social) === val);
-                    handleSelectCompany(found || val);
-                  }
-                }}
-                className="w-full bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500 truncate"
+                onChange={(e) => handleCompanySelect(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500 truncate mt-1"
               >
                 <option value="TODAS">📊 TODAS (Población Agregada)</option>
-                {filteredCompanies.map((c: any, idx: number) => {
-                  const compName = typeof c === 'string' ? c : (c.razon_social || c.name);
-                  const compNit = typeof c === 'object' ? c.nit : '';
-                  return (
-                    <option key={idx} value={compName}>
-                      {compNit ? `[${compNit}] ` : ''}{compName}
-                    </option>
-                  );
-                })}
+                {filtersList?.empresas?.map((emp: any) => (
+                  <option key={emp.nit} value={emp.razon_social}>
+                    {emp.razon_social} (NIT: {emp.nit})
+                  </option>
+                ))}
               </select>
+              
+              {/* Lista desplegable flotante de resultados filtrados de búsqueda */}
+              {showCompanyDropdown && companySearch.trim().length > 1 && (
+                <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-300 rounded-lg shadow-xl max-h-56 overflow-y-auto z-50 divide-y divide-slate-100">
+                  <div
+                    onClick={() => handleCompanySelect("TODAS")}
+                    className="p-2 hover:bg-indigo-50 cursor-pointer text-xs font-bold text-indigo-700 flex items-center justify-between"
+                  >
+                    <span>📊 TODAS (Población Agregada)</span>
+                    <span className="text-[10px] bg-indigo-100 px-1.5 py-0.5 rounded text-indigo-600">General</span>
+                  </div>
+                  {filteredCompanies.length === 0 ? (
+                    <div className="p-3 text-xs text-slate-400 text-center">No se encontraron empresas</div>
+                  ) : (
+                    filteredCompanies.map((emp: any) => (
+                      <div
+                        key={emp.nit}
+                        onClick={() => handleCompanySelect(emp.razon_social, emp.nit)}
+                        className="p-2 hover:bg-indigo-50 cursor-pointer text-xs transition-colors"
+                      >
+                        <div className="font-bold text-slate-800 truncate">{emp.razon_social}</div>
+                        <div className="text-[10px] text-slate-500 font-mono">NIT: {emp.nit}</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
 
             {/* 3. FILTRO: PERIODO DE ANÁLISIS */}
@@ -700,9 +838,9 @@ export default function IntegralFinancialDashboard() {
                   <select
                     value={anoInicio}
                     onChange={handleAnoInicioChange}
-                    className="w-full bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg p-1.5 font-semibold focus:ring-2 focus:ring-indigo-500"
                   >
-                    {[2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024].map(y => (
+                    {availableYears.map(y => (
                       <option key={y} value={y}>{y}</option>
                     ))}
                   </select>
@@ -712,9 +850,9 @@ export default function IntegralFinancialDashboard() {
                   <select
                     value={anoFin}
                     onChange={handleAnoFinChange}
-                    className="w-full bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg p-1.5 font-semibold focus:ring-2 focus:ring-indigo-500"
                   >
-                    {[2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024].map(y => (
+                    {availableYears.filter(y => y >= anoInicio).map(y => (
                       <option key={y} value={y}>{y}</option>
                     ))}
                   </select>
@@ -744,19 +882,39 @@ export default function IntegralFinancialDashboard() {
               </select>
             </div>
 
-            {/* 5. FILTRO: DEPARTAMENTO (32 DEPARTAMENTOS) */}
+            {/* 5. FILTRO: DEPARTAMENTO */}
             <div className="space-y-1">
               <label className="text-[11px] font-bold text-slate-700 uppercase tracking-tight block">
                 Departamento ({filtersList?.departamentos?.length || 32} departamentos)
               </label>
               <select
                 value={selectedDepto}
-                onChange={(e) => setSelectedDepto(e.target.value)}
+                onChange={(e) => {
+                  setSelectedDepto(e.target.value);
+                  setSelectedCiudad("TODOS");
+                }}
                 className="w-full bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500 truncate"
               >
                 <option value="TODOS">Todos los Departamentos</option>
                 {filtersList?.departamentos?.map((d: string, idx: number) => (
                   <option key={idx} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* 5.1 FILTRO: CIUDAD / MUNICIPIO */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-slate-700 uppercase tracking-tight block">
+                Ciudad / Municipio ({availableCiudades.length} ciudades{selectedDepto !== "TODOS" ? ` en ${selectedDepto}` : ""})
+              </label>
+              <select
+                value={selectedCiudad}
+                onChange={(e) => setSelectedCiudad(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500 truncate"
+              >
+                <option value="TODOS">Todas las Ciudades</option>
+                {availableCiudades.map((c: string, idx: number) => (
+                  <option key={idx} value={c}>{c}</option>
                 ))}
               </select>
             </div>
@@ -868,7 +1026,7 @@ export default function IntegralFinancialDashboard() {
             {/* KPI 1: Activos Totales */}
             <div className="bg-white border border-slate-200/90 rounded-xl p-3 sm:p-3.5 shadow-sm flex flex-col justify-between hover:border-indigo-300 transition-all min-w-0">
               <div className="flex items-center justify-between gap-1">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight truncate">Activos {info.ano_actual || 2024}</span>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight truncate">Activos {info.ano_actual || 2025}</span>
                 <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg shrink-0"><DollarSign className="w-4 h-4" /></div>
               </div>
               <div className="my-1.5">
@@ -879,7 +1037,7 @@ export default function IntegralFinancialDashboard() {
                   <span className={`font-bold whitespace-nowrap ${kpis.activos_totales?.var_pct >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                     {kpis.activos_totales?.var_pct >= 0 ? '↑' : '↓'} {Math.abs(kpis.activos_totales?.var_pct || 0).toFixed(2)}%
                   </span>
-                  <span className="text-[10px] text-slate-400 whitespace-nowrap">vs {info.ano_anterior || 2023}</span>
+                  <span className="text-[10px] text-slate-400 whitespace-nowrap">vs {info.ano_anterior || 2024}</span>
                 </div>
               </div>
             </div>
@@ -887,7 +1045,7 @@ export default function IntegralFinancialDashboard() {
             {/* KPI 2: Utilidad Neta */}
             <div className="bg-white border border-slate-200/90 rounded-xl p-3 sm:p-3.5 shadow-sm flex flex-col justify-between hover:border-emerald-300 transition-all min-w-0">
               <div className="flex items-center justify-between gap-1">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight truncate">Utilidad Neta {info.ano_actual || 2024}</span>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight truncate">Utilidad Neta {info.ano_actual || 2025}</span>
                 <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0"><CheckCircle2 className="w-4 h-4" /></div>
               </div>
               <div className="my-1.5">
@@ -898,7 +1056,7 @@ export default function IntegralFinancialDashboard() {
                   <span className={`font-bold whitespace-nowrap ${kpis.utilidad_neta?.var_pct >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                     {kpis.utilidad_neta?.var_pct >= 0 ? '↑' : '↓'} {Math.abs(kpis.utilidad_neta?.var_pct || 0).toFixed(2)}%
                   </span>
-                  <span className="text-[10px] text-slate-400 whitespace-nowrap">vs {info.ano_anterior || 2023}</span>
+                  <span className="text-[10px] text-slate-400 whitespace-nowrap">vs {info.ano_anterior || 2024}</span>
                 </div>
               </div>
             </div>
@@ -906,7 +1064,7 @@ export default function IntegralFinancialDashboard() {
             {/* KPI 3: Ventas Netas */}
             <div className="bg-white border border-slate-200/90 rounded-xl p-3 sm:p-3.5 shadow-sm flex flex-col justify-between hover:border-purple-300 transition-all min-w-0">
               <div className="flex items-center justify-between gap-1">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight truncate">Ventas {info.ano_actual || 2024}</span>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight truncate">Ventas {info.ano_actual || 2025}</span>
                 <div className="p-1.5 bg-purple-50 text-purple-600 rounded-lg shrink-0"><PieChart className="w-4 h-4" /></div>
               </div>
               <div className="my-1.5">
@@ -917,7 +1075,7 @@ export default function IntegralFinancialDashboard() {
                   <span className={`font-bold whitespace-nowrap ${kpis.ventas?.var_pct >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                     {kpis.ventas?.var_pct >= 0 ? '↑' : '↓'} {Math.abs(kpis.ventas?.var_pct || 0).toFixed(2)}%
                   </span>
-                  <span className="text-[10px] text-slate-400 whitespace-nowrap">vs {info.ano_anterior || 2023}</span>
+                  <span className="text-[10px] text-slate-400 whitespace-nowrap">vs {info.ano_anterior || 2024}</span>
                 </div>
               </div>
             </div>
@@ -925,7 +1083,7 @@ export default function IntegralFinancialDashboard() {
             {/* KPI 4: EBITDA */}
             <div className="bg-white border border-slate-200/90 rounded-xl p-3 sm:p-3.5 shadow-sm flex flex-col justify-between hover:border-amber-300 transition-all min-w-0">
               <div className="flex items-center justify-between gap-1">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight truncate">EBITDA {info.ano_actual || 2024}</span>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight truncate">EBITDA {info.ano_actual || 2025}</span>
                 <div className="p-1.5 bg-amber-50 text-amber-600 rounded-lg shrink-0"><Compass className="w-4 h-4" /></div>
               </div>
               <div className="my-1.5">
@@ -936,7 +1094,7 @@ export default function IntegralFinancialDashboard() {
                   <span className={`font-bold whitespace-nowrap ${kpis.ebitda?.var_pct >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                     {kpis.ebitda?.var_pct >= 0 ? '↑' : '↓'} {Math.abs(kpis.ebitda?.var_pct || 0).toFixed(2)}%
                   </span>
-                  <span className="text-[10px] text-slate-400 whitespace-nowrap">vs {info.ano_anterior || 2023}</span>
+                  <span className="text-[10px] text-slate-400 whitespace-nowrap">vs {info.ano_anterior || 2024}</span>
                 </div>
               </div>
             </div>
@@ -944,7 +1102,7 @@ export default function IntegralFinancialDashboard() {
             {/* KPI 5: ROE */}
             <div className="bg-white border border-slate-200/90 rounded-xl p-3 sm:p-3.5 shadow-sm flex flex-col justify-between hover:border-cyan-300 transition-all min-w-0">
               <div className="flex items-center justify-between gap-1">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight truncate">ROE {info.ano_actual || 2024}</span>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight truncate">ROE {info.ano_actual || 2025}</span>
                 <div className="p-1.5 bg-cyan-50 text-cyan-600 rounded-lg shrink-0"><Award className="w-4 h-4" /></div>
               </div>
               <div className="my-1.5">
@@ -955,7 +1113,7 @@ export default function IntegralFinancialDashboard() {
                   <span className={`font-bold whitespace-nowrap ${kpis.roe?.var_pp >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                     {kpis.roe?.var_pp >= 0 ? '↑' : '↓'} {Math.abs(kpis.roe?.var_pp || 0).toFixed(2)} p.p.
                   </span>
-                  <span className="text-[10px] text-slate-400 whitespace-nowrap">vs {info.ano_anterior || 2023}</span>
+                  <span className="text-[10px] text-slate-400 whitespace-nowrap">vs {info.ano_anterior || 2024}</span>
                 </div>
               </div>
             </div>
@@ -963,7 +1121,7 @@ export default function IntegralFinancialDashboard() {
             {/* KPI 6: Margen Neto */}
             <div className="bg-white border border-slate-200/90 rounded-xl p-3 sm:p-3.5 shadow-sm flex flex-col justify-between hover:border-rose-300 transition-all min-w-0">
               <div className="flex items-center justify-between gap-1">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight truncate">Margen Neto {info.ano_actual || 2024}</span>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight truncate">Margen Neto {info.ano_actual || 2025}</span>
                 <div className="p-1.5 bg-rose-50 text-rose-600 rounded-lg shrink-0"><Percent className="w-4 h-4" /></div>
               </div>
               <div className="my-1.5">
@@ -1001,8 +1159,8 @@ export default function IntegralFinancialDashboard() {
                       <thead>
                         <tr className="border-b border-slate-200 text-slate-500 font-bold text-[10px] uppercase">
                           <th className="pb-2">Cuenta</th>
-                          <th className="pb-2 text-right">{info.ano_actual || 2024}</th>
-                          <th className="pb-2 text-right">{info.ano_anterior || 2023}</th>
+                          <th className="pb-2 text-right">{info.ano_actual || 2025}</th>
+                          <th className="pb-2 text-right">{info.ano_anterior || 2024}</th>
                           <th className="pb-2 text-right">Var %</th>
                           <th className="pb-2 text-right">Tendencia</th>
                         </tr>
@@ -1043,8 +1201,8 @@ export default function IntegralFinancialDashboard() {
                       <thead>
                         <tr className="border-b border-slate-200 text-slate-500 font-bold text-[10px] uppercase">
                           <th className="pb-2">Cuenta</th>
-                          <th className="pb-2 text-right">{info.ano_actual || 2024} %</th>
-                          <th className="pb-2 text-right">{info.ano_anterior || 2023} %</th>
+                          <th className="pb-2 text-right">{info.ano_actual || 2025} %</th>
+                          <th className="pb-2 text-right">{info.ano_anterior || 2024} %</th>
                           <th className="pb-2 text-right">Var (p.p.)</th>
                           <th className="pb-2 text-right">Estructura</th>
                         </tr>
@@ -1085,8 +1243,8 @@ export default function IntegralFinancialDashboard() {
                       <thead>
                         <tr className="border-b border-slate-200 text-slate-500 font-bold text-[10px] uppercase">
                           <th className="pb-2">Cuenta</th>
-                          <th className="pb-2 text-right">{info.ano_actual || 2024}</th>
-                          <th className="pb-2 text-right">{info.ano_anterior || 2023}</th>
+                          <th className="pb-2 text-right">{info.ano_actual || 2025}</th>
+                          <th className="pb-2 text-right">{info.ano_anterior || 2024}</th>
                           <th className="pb-2 text-right">Var $</th>
                           <th className="pb-2 text-right">Var %</th>
                         </tr>
@@ -1483,7 +1641,7 @@ export default function IntegralFinancialDashboard() {
             <div className="bg-white border border-slate-200/90 rounded-xl p-4 shadow-sm flex flex-col justify-between">
               <div>
                 <h4 className="font-bold text-slate-900 text-xs mb-1">
-                  COMPARATIVO CON EL SECTOR ({info.ano_actual || 2024})
+                  COMPARATIVO CON EL SECTOR ({info.ano_actual || 2025})
                 </h4>
                 <p className="text-[10px] text-slate-500 mb-3">Empresa vs Promedio del Sector</p>
                 <div className="h-44 w-full flex items-end justify-around gap-2 pt-2 pb-5 border-b border-slate-200">
@@ -1648,6 +1806,17 @@ export default function IntegralFinancialDashboard() {
 
         </div>
       </div>
+
+      {/* MODALES DE AUTENTICACIÓN Y GESTIÓN DE USUARIOS */}
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+      />
+
+      <UserManagementModal 
+        isOpen={showUserModal} 
+        onClose={() => setShowUserModal(false)} 
+      />
 
     </div>
   );

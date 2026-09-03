@@ -204,7 +204,9 @@ export default function BIDashboardExplorer({
   selectedMacroSector: propsMacroSector,
   setSelectedMacroSector: propsSetMacroSector,
   selectedAnos: propsAnos,
-  setSelectedAnos: propsSetAnos
+  setSelectedAnos: propsSetAnos,
+  selectedCiudad: propsCiudad,
+  setSelectedCiudad: propsSetCiudad
 }: any) {
   const [metric, setMetric] = useState<MetricKey>('ingresos');
   const [level, setLevel] = useState<AnalysisLevel>('dept');
@@ -218,6 +220,7 @@ export default function BIDashboardExplorer({
   const [localCiiu, setLocalCiiu] = useState<string>('TODOS');
   const [localMacroSector, setLocalMacroSector] = useState<string>('TODOS');
   const [localAnos, setLocalAnos] = useState<string[]>([]);
+  const [localCiudad, setLocalCiudad] = useState<string>('TODOS');
   
   // Resolver estados activos
   const selectedTamano = propsTamano !== undefined ? propsTamano : localTamano;
@@ -231,6 +234,9 @@ export default function BIDashboardExplorer({
   
   const selectedAnos = propsAnos !== undefined ? propsAnos : localAnos;
   const setSelectedAnos = propsSetAnos !== undefined ? propsSetAnos : setLocalAnos;
+
+  const selectedCiudad = propsCiudad !== undefined ? propsCiudad : localCiudad;
+  const setSelectedCiudad = propsSetCiudad !== undefined ? propsSetCiudad : setLocalCiudad;
 
   const [usingCache, setUsingCache] = useState(false);
 
@@ -288,11 +294,12 @@ export default function BIDashboardExplorer({
     fetchData();
   }, []);
 
-  const { tamanos, ciius, macroSectores, anos } = useMemo(() => {
+  const { tamanos, ciius, macroSectores, anos, ciudades } = useMemo(() => {
     const t = new Set<string>();
     const c = new Set<string>();
     const m = new Set<string>();
     const a = new Set<string>();
+    const ciu = new Set<string>();
     
     const cleanYear = (yr: any): string => {
       if (!yr || yr === 'N/A') return '';
@@ -307,6 +314,9 @@ export default function BIDashboardExplorer({
         c.add(d.ciiu);
         m.add(d.ciiu.charAt(0).toUpperCase());
       }
+      if (d.ciudad && d.ciudad !== 'N/A') {
+        ciu.add(String(d.ciudad).trim().toUpperCase());
+      }
       const y = cleanYear(d.ano);
       if (y && y !== '0') {
         a.add(y);
@@ -317,7 +327,8 @@ export default function BIDashboardExplorer({
       tamanos: Array.from(t).sort(),
       ciius: Array.from(c).sort(),
       macroSectores: Array.from(m).sort(),
-      anos: Array.from(a).sort((x, y) => Number(y) - Number(x)) // Sort descending (2024, 2023, ..., 2015)
+      anos: Array.from(a).sort((x, y) => Number(y) - Number(x)), // Sort descending (2024, 2023, ..., 2015)
+      ciudades: Array.from(ciu).sort()
     };
   }, [realData]);
 
@@ -331,6 +342,10 @@ export default function BIDashboardExplorer({
     }
     if (selectedMacroSector !== 'TODOS') {
       data = data.filter(d => d.ciiu && d.ciiu.charAt(0).toUpperCase() === selectedMacroSector);
+    }
+    if (selectedCiudad && selectedCiudad !== 'TODOS') {
+      const normSelCity = normalizeName(selectedCiudad);
+      data = data.filter(d => (d._normCity || normalizeName(d.ciudad)) === normSelCity);
     }
     
     const cleanYear = (yr: any): string => {
@@ -349,7 +364,7 @@ export default function BIDashboardExplorer({
     }
     
     return data;
-  }, [realData, selectedTamano, selectedCiiu, selectedMacroSector, selectedAnos]);
+  }, [realData, selectedTamano, selectedCiiu, selectedMacroSector, selectedCiudad, selectedAnos]);
 
   // 4. Lógica de Auditoría de Datos
   const auditReport = useMemo(() => {
@@ -630,7 +645,7 @@ export default function BIDashboardExplorer({
         </div>
 
         {/* Fila de Filtros Avanzados */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 pt-4 border-t border-[#4fc3f7]/10 z-10">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 pt-4 border-t border-[#4fc3f7]/10 z-10">
           
           {/* Filtro Métrica */}
           <div className="flex flex-col gap-1.5 bg-slate-900/50 p-3 rounded-lg border border-[#4fc3f7]/20">
@@ -710,6 +725,21 @@ export default function BIDashboardExplorer({
             >
               <option value="TODOS" className="bg-[#000022] text-slate-200">TODOS</option>
               {ciius.map(opt => (
+                <option key={opt} value={opt} className="bg-[#000022] text-slate-200">{opt}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filtro Ciudad */}
+          <div className="flex flex-col gap-1.5 bg-slate-900/50 p-3 rounded-lg border border-[#4fc3f7]/20">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Ciudad / Municipio</span>
+            <select
+              value={selectedCiudad}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedCiudad(e.target.value)}
+              className="bg-transparent text-[#4fc3f7] text-sm font-bold outline-none cursor-pointer hover:text-[#4fc3f7]/80 transition-colors w-full truncate"
+            >
+              <option value="TODOS" className="bg-[#000022] text-slate-200">TODAS LAS CIUDADES</option>
+              {ciudades.map(opt => (
                 <option key={opt} value={opt} className="bg-[#000022] text-slate-200">{opt}</option>
               ))}
             </select>
