@@ -243,11 +243,17 @@ export default function BIDashboardExplorer({
   // 4. Conexión a API y Caché (Fase Producción)
   useEffect(() => {
     const CACHE_KEY = 'bi_dashboard_data_cache';
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000); // 12-second timeout
     
     const fetchData = async () => {
       try {
         const backendUrl = BACKEND_URL;
-        const response = await fetch(`${backendUrl}/api/bi/raw?limit=200000`, { cache: 'no-store' });
+        const response = await fetch(`${backendUrl}/api/bi/raw?limit=200000`, { 
+          cache: 'no-store',
+          signal: controller.signal 
+        });
+        clearTimeout(timeoutId);
         if (!response.ok) throw new Error("API falló");
         
         const data = await response.json();
@@ -268,6 +274,7 @@ export default function BIDashboardExplorer({
           }
         }
       } catch (error) {
+        clearTimeout(timeoutId);
         // Fallback a caché
         try {
           const cached = localStorage.getItem(CACHE_KEY);
@@ -292,6 +299,10 @@ export default function BIDashboardExplorer({
       }
     };
     fetchData();
+    return () => {
+      controller.abort();
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   const { tamanos, ciius, macroSectores, anos, ciudades } = useMemo(() => {

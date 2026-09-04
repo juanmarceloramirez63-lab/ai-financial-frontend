@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { BACKEND_URL } from '../lib/config';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { 
   TrendingUp, AlertTriangle, ShieldCheck, HelpCircle, Download, 
-  Search, Sliders, Loader2, Sparkles, Filter
+  Search, Sliders, Loader2, Sparkles, Filter, RotateCcw, MapPin, Building2, Calendar
 } from 'lucide-react';
 
 import IntegralFinancialDashboard from './IntegralFinancialDashboard';
@@ -59,13 +59,16 @@ interface CompanyItem {
 }
 
 export default function StatisticalAnalysisDashboard({
-  selectedDept,
+  selectedDept = 'TODOS',
   setSelectedDept,
-  selectedTamano,
+  selectedCiudad = 'TODOS',
+  setSelectedCiudad,
+  selectedTamano = 'TODOS',
   setSelectedTamano,
-  selectedYear,
+  selectedYear = 'TODOS',
   setSelectedYear,
-  selectedCiiu
+  selectedCiiu = 'TODOS',
+  setSelectedCiiu
 }: any) {
   const [loading, setLoading] = useState(true);
   const [statsData, setStatsData] = useState<StatItem[]>([]);
@@ -74,12 +77,94 @@ export default function StatisticalAnalysisDashboard({
   const [companies, setCompanies] = useState<CompanyItem[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<string>('');
   const [companyDetails, setCompanyDetails] = useState<any | null>(null);
+  const [loadingCompanyDetails, setLoadingCompanyDetails] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Filtros interactivos locales y sincronizados
+  const [activeDept, setActiveDept] = useState(selectedDept || 'TODOS');
+  const [activeCiudad, setActiveCiudad] = useState(selectedCiudad || 'TODOS');
+  const [activeTamano, setActiveTamano] = useState(selectedTamano || 'TODOS');
+  const [activeYear, setActiveYear] = useState(selectedYear || 'TODOS');
+  const [activeCiiu, setActiveCiiu] = useState(selectedCiiu || 'TODOS');
+
+  // Metadatos de opciones de filtros de la BD
+  const [filtersMeta, setFiltersMeta] = useState<any>(null);
 
   // Sliders del Simulador de Estrés (Por defecto 0% para ver situación base limpia)
   const [shockRevenue, setShockRevenue] = useState(0);
   const [shockCosts, setShockCosts] = useState(0);
   const [shockExpenses, setShockExpenses] = useState(0);
+
+  // Sincronizar props entrantes
+  useEffect(() => {
+    if (selectedDept !== undefined) setActiveDept(selectedDept);
+  }, [selectedDept]);
+
+  useEffect(() => {
+    if (selectedCiudad !== undefined) setActiveCiudad(selectedCiudad);
+  }, [selectedCiudad]);
+
+  useEffect(() => {
+    if (selectedTamano !== undefined) setActiveTamano(selectedTamano);
+  }, [selectedTamano]);
+
+  useEffect(() => {
+    if (selectedYear !== undefined) setActiveYear(selectedYear);
+  }, [selectedYear]);
+
+  useEffect(() => {
+    if (selectedCiiu !== undefined) setActiveCiiu(selectedCiiu);
+  }, [selectedCiiu]);
+
+  // Cargar metadatos de filtros desde backend
+  useEffect(() => {
+    async function loadFilterOptions() {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/bi/filters`);
+        if (res.ok) {
+          const json = await res.json();
+          setFiltersMeta(json);
+        }
+      } catch (err) {
+        console.error("Error al cargar filtros para Estadísticas:", err);
+      }
+    }
+    loadFilterOptions();
+  }, []);
+
+  // Lista de ciudades disponibles dinámicamente según el departamento seleccionado
+  const availableCities = useMemo(() => {
+    if (!filtersMeta) return [];
+    if (activeDept !== "TODOS" && filtersMeta.ciudades_por_departamento && filtersMeta.ciudades_por_departamento[activeDept]) {
+      return filtersMeta.ciudades_por_departamento[activeDept];
+    }
+    return filtersMeta.ciudades || [];
+  }, [filtersMeta, activeDept]);
+
+  // Manejar sincronización de filtros desde el Dashboard Integral
+  const handleIntegralFiltersChange = useCallback((filters: any) => {
+    if (filters.departamento) {
+      setActiveDept(filters.departamento);
+      if (setSelectedDept) setSelectedDept(filters.departamento);
+    }
+    if (filters.ciudad) {
+      setActiveCiudad(filters.ciudad);
+      if (setSelectedCiudad) setSelectedCiudad(filters.ciudad);
+    }
+    if (filters.tamano) {
+      setActiveTamano(filters.tamano);
+      if (setSelectedTamano) setSelectedTamano(filters.tamano);
+    }
+    if (filters.sector) {
+      setActiveCiiu(filters.sector);
+      if (setSelectedCiiu) setSelectedCiiu(filters.sector);
+    }
+    if (filters.anoFin) {
+      const yr = String(filters.anoFin);
+      setActiveYear(yr);
+      if (setSelectedYear) setSelectedYear(yr);
+    }
+  }, [setSelectedDept, setSelectedCiudad, setSelectedTamano, setSelectedCiiu, setSelectedYear]);
 
   // Cargar datos del análisis estadístico
   const loadStats = async () => {
@@ -92,10 +177,11 @@ export default function StatisticalAnalysisDashboard({
           expenses: shockExpenses
         }
       };
-      if (selectedDept && selectedDept !== 'TODOS') payload.ciudad = selectedDept; 
-      if (selectedTamano && selectedTamano !== 'TODOS') payload.tamano = selectedTamano;
-      if (selectedYear && selectedYear !== 'TODOS') payload.anio = parseInt(selectedYear);
-      if (selectedCiiu && selectedCiiu !== 'TODOS') payload.sector = selectedCiiu;
+      if (activeDept && activeDept !== 'TODOS') payload.departamento = activeDept;
+      if (activeCiudad && activeCiudad !== 'TODOS') payload.ciudad = activeCiudad;
+      if (activeTamano && activeTamano !== 'TODOS') payload.tamano = activeTamano;
+      if (activeYear && activeYear !== 'TODOS') payload.anio = parseInt(activeYear);
+      if (activeCiiu && activeCiiu !== 'TODOS') payload.sector = activeCiiu;
 
       const res = await fetch(`${BACKEND_URL}/api/bi/stats`, {
         method: 'POST',
@@ -125,14 +211,28 @@ export default function StatisticalAnalysisDashboard({
     }
   };
 
-  // Escuchar cambios en los filtros globales vinculados
+  // Escuchar cambios en los filtros activos
   useEffect(() => {
     loadStats();
-  }, [selectedDept, selectedTamano, selectedYear, selectedCiiu]);
+  }, [activeDept, activeCiudad, activeTamano, activeYear, activeCiiu]);
 
   // Ejecutar el estrés manual al pulsar el botón
   const handleApplyStress = () => {
     loadStats();
+  };
+
+  // Restablecer filtros a TODOS
+  const handleResetFilters = () => {
+    setActiveDept('TODOS');
+    setActiveCiudad('TODOS');
+    setActiveTamano('TODOS');
+    setActiveYear('TODOS');
+    setActiveCiiu('TODOS');
+    if (setSelectedDept) setSelectedDept('TODOS');
+    if (setSelectedCiudad) setSelectedCiudad('TODOS');
+    if (setSelectedTamano) setSelectedTamano('TODOS');
+    if (setSelectedYear) setSelectedYear('TODOS');
+    if (setSelectedCiiu) setSelectedCiiu('TODOS');
   };
 
   // Calcular la desviación estándar de la empresa seleccionada frente al grupo
@@ -172,19 +272,58 @@ export default function StatisticalAnalysisDashboard({
     return results;
   }, [selectedCompany, companyDetails, statsData]);
 
-  // Selección de empresa para Benchmark
-  const handleSelectCompany = async (nit: string) => {
+  // Selección de empresa para Benchmark (consulta integral-dashboard o fallback clientes)
+  const handleSelectCompany = async (nit: string, razonSocial?: string) => {
     setSelectedCompany(nit);
     if (!nit) {
       setCompanyDetails(null);
       return;
     }
     
+    setLoadingCompanyDetails(true);
     try {
+      // 1. Intentar obtener datos completos de la base de datos empresarial BI
+      const resBi = await fetch(`${BACKEND_URL}/api/bi/integral-dashboard`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nit: nit })
+      });
+
+      if (resBi.ok) {
+        const dataBi = await resBi.json();
+        if (dataBi && dataBi.empresa_info && dataBi.empresa_info.nit && dataBi.empresa_info.nit !== 'N/A') {
+          const k = dataBi.kpis || {};
+          const ig = dataBi.indicadores_gauges || {};
+          const findG = (list: any[], term: string) => list?.find((g: any) => g.name?.toLowerCase().includes(term.toLowerCase()))?.actual || 0;
+
+          const actTot = k.activos_totales?.actual || 0;
+          const utNet = k.utilidad_neta?.actual || 0;
+          const patTot = k.patrimonio_total?.actual || 0;
+          const pasTot = k.pasivos_totales?.actual || (actTot - patTot);
+
+          setCompanyDetails({
+            razon_social: dataBi.empresa_info.razon_social || razonSocial || `Empresa (NIT: ${nit})`,
+            roa: findG(ig.rentabilidad, 'roa') || (actTot > 0 ? (utNet / actTot) * 100 : 0),
+            roe: k.roe?.actual || findG(ig.rentabilidad, 'roe') || 0,
+            endeudamiento_total: findG(ig.endeudamiento, 'endeudamiento') || 0,
+            prueba_acida: findG(ig.liquidez, 'ácida') || findG(ig.liquidez, 'acida') || 0,
+            liquidez_corriente: findG(ig.liquidez, 'corriente') || 0,
+            activo_total: actTot,
+            pasivo_total: pasTot,
+            patrimonio: patTot,
+            ventas: k.ventas?.actual || 0,
+            utilidad_neta: utNet
+          });
+          setLoadingCompanyDetails(false);
+          return;
+        }
+      }
+
+      // 2. Fallback a portafolio de clientes auditados
       const res = await fetch(`/api/clientes`);
       if (res.ok) {
         const data = await res.json();
-        const found = data.clientes?.find((c: any) => c.nit === nit);
+        const found = data.clientes?.find((c: any) => String(c.nit) === String(nit));
         if (found) {
           const diag = found.diagnostico;
           const raw = found.datos_extraidos;
@@ -206,7 +345,9 @@ export default function StatisticalAnalysisDashboard({
         }
       }
     } catch (e) {
-      console.error(e);
+      console.error("Error al cargar detalles de empresa para benchmark:", e);
+    } finally {
+      setLoadingCompanyDetails(false);
     }
   };
 
@@ -216,10 +357,12 @@ export default function StatisticalAnalysisDashboard({
 
   // Filtrado de la lista de empresas por búsqueda
   const filteredCompanies = useMemo(() => {
+    if (!companies.length) return [];
     if (!searchQuery) return companies.slice(0, 50); 
+    const searchLower = searchQuery.toLowerCase().trim();
     return companies.filter(c => 
-      c.razon_social.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      c.nit.includes(searchQuery)
+      c.razon_social.toLowerCase().includes(searchLower) || 
+      String(c.nit).includes(searchLower)
     ).slice(0, 50);
   }, [companies, searchQuery]);
 
@@ -246,7 +389,7 @@ export default function StatisticalAnalysisDashboard({
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `analisis_estadistico_${selectedDept}_${selectedTamano}.csv`);
+    link.setAttribute("download", `analisis_estadistico_${activeDept}_${activeTamano}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -269,11 +412,30 @@ export default function StatisticalAnalysisDashboard({
     ];
   }, [stressData]);
 
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (activeDept !== 'TODOS') count++;
+    if (activeCiudad !== 'TODOS') count++;
+    if (activeTamano !== 'TODOS') count++;
+    if (activeYear !== 'TODOS') count++;
+    if (activeCiiu !== 'TODOS') count++;
+    return count;
+  }, [activeDept, activeCiudad, activeTamano, activeYear, activeCiiu]);
+
   return (
     <div className="p-4 md:p-8 space-y-8 bg-[#000033] min-h-screen text-slate-200">
       
-      {/* 1. DASHBOARD DE ANÁLISIS FINANCIERO INTEGRAL (SUPER PROMPT COMPONENTE PRINCIPAL) */}
-      <IntegralFinancialDashboard />
+      {/* 1. DASHBOARD DE ANÁLISIS FINANCIERO INTEGRAL */}
+      <IntegralFinancialDashboard 
+        onFiltersChange={handleIntegralFiltersChange}
+        initialFilters={{
+          departamento: activeDept,
+          ciudad: activeCiudad,
+          tamano: activeTamano,
+          sector: activeCiiu,
+          ano: activeYear
+        }}
+      />
 
       {/* SEPARADOR EJECUTIVO */}
       <div className="flex items-center gap-4 my-8">
@@ -284,30 +446,144 @@ export default function StatisticalAnalysisDashboard({
         <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#4fc3f7]/40 to-transparent"></div>
       </div>
 
-      {/* HEADER DE FILTROS VINCULADOS GLOBALES */}
-      <div className="bg-[#000022] border border-[#4fc3f7]/20 p-5 rounded-2xl shadow-xl flex flex-wrap gap-4 items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Filter className="w-5 h-5 text-indigo-400" />
-          <h3 className="font-bold text-white uppercase text-xs tracking-wider">Filtros Activos (BI Sincronizados)</h3>
+      {/* BARRA DE FILTROS INTERACTIVA Y SINCRONIZADA */}
+      <div className="bg-[#000022] border border-[#4fc3f7]/30 p-5 rounded-2xl shadow-xl space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
+          <div className="flex items-center gap-2">
+            <Filter className="w-5 h-5 text-indigo-400" />
+            <h3 className="font-bold text-white uppercase text-xs tracking-wider">
+              Filtros Activos (Tendencia Central y Simulador BI)
+            </h3>
+            {activeFiltersCount > 0 && (
+              <span className="bg-indigo-600/40 text-indigo-300 border border-indigo-500/40 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                {activeFiltersCount} activo{activeFiltersCount > 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+
+          <button
+            onClick={handleResetFilters}
+            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 px-3 py-1.5 rounded-lg transition-colors border border-slate-700"
+            title="Restablecer todos los filtros a TODOS"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Restablecer Filtros</span>
+          </button>
         </div>
         
-        <div className="flex flex-wrap gap-6 text-xs font-bold text-slate-300">
-          <div>
-            <span className="text-slate-500 uppercase tracking-widest text-[9px] block">Departamento/Ciudad</span>
-            <span className="text-[#ffff00]">{selectedDept === 'TODOS' ? 'TODOS' : selectedDept}</span>
+        {/* CONTROLES DESPLEGABLES INTERACTIVOS */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          
+          {/* 1. Selector de Departamento */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+              Departamento
+            </label>
+            <select
+              value={activeDept}
+              onChange={(e) => {
+                const val = e.target.value;
+                setActiveDept(val);
+                setActiveCiudad('TODOS');
+                if (setSelectedDept) setSelectedDept(val);
+                if (setSelectedCiudad) setSelectedCiudad('TODOS');
+              }}
+              className="w-full bg-[#161b22] border border-slate-700 text-slate-200 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none truncate"
+            >
+              <option value="TODOS">Todos los Deptos</option>
+              {filtersMeta?.departamentos?.map((d: string, idx: number) => (
+                <option key={idx} value={d}>{d}</option>
+              ))}
+            </select>
           </div>
-          <div>
-            <span className="text-slate-500 uppercase tracking-widest text-[9px] block">Tamaño Empresa</span>
-            <span className="text-[#ffff00]">{selectedTamano}</span>
+
+          {/* 2. Selector de Ciudad */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+              Ciudad / Municipio
+            </label>
+            <select
+              value={activeCiudad}
+              onChange={(e) => {
+                const val = e.target.value;
+                setActiveCiudad(val);
+                if (setSelectedCiudad) setSelectedCiudad(val);
+              }}
+              className="w-full bg-[#161b22] border border-slate-700 text-slate-200 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none truncate"
+            >
+              <option value="TODOS">Todas las Ciudades</option>
+              {availableCities.map((c: string, idx: number) => (
+                <option key={idx} value={c}>{c}</option>
+              ))}
+            </select>
           </div>
-          <div>
-            <span className="text-slate-500 uppercase tracking-widest text-[9px] block">Año(s)</span>
-            <span className="text-[#ffff00]">{selectedYear}</span>
+
+          {/* 3. Selector de Tamaño */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+              Tamaño Empresa
+            </label>
+            <select
+              value={activeTamano}
+              onChange={(e) => {
+                const val = e.target.value;
+                setActiveTamano(val);
+                if (setSelectedTamano) setSelectedTamano(val);
+              }}
+              className="w-full bg-[#161b22] border border-slate-700 text-slate-200 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            >
+              <option value="TODOS">Todos los Tamaños</option>
+              <option value="MICRO">Microempresa</option>
+              <option value="PEQUEÑA">Pequeña</option>
+              <option value="MEDIANA">Mediana</option>
+              <option value="GRANDE">Grande</option>
+            </select>
           </div>
-          <div>
-            <span className="text-slate-500 uppercase tracking-widest text-[9px] block">Sector CIIU</span>
-            <span className="text-[#ffff00]">{selectedCiiu === 'TODOS' ? 'TODOS' : selectedCiiu}</span>
+
+          {/* 4. Selector de Año */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+              Año de Corte
+            </label>
+            <select
+              value={activeYear}
+              onChange={(e) => {
+                const val = e.target.value;
+                setActiveYear(val);
+                if (setSelectedYear) setSelectedYear(val);
+              }}
+              className="w-full bg-[#161b22] border border-slate-700 text-slate-200 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            >
+              <option value="TODOS">Todos los Años</option>
+              {filtersMeta?.anios?.map((y: number) => (
+                <option key={y} value={y.toString()}>{y}</option>
+              ))}
+            </select>
           </div>
+
+          {/* 5. Selector de Sector CIIU */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+              Sector CIIU
+            </label>
+            <select
+              value={activeCiiu}
+              onChange={(e) => {
+                const val = e.target.value;
+                setActiveCiiu(val);
+                if (setSelectedCiiu) setSelectedCiiu(val);
+              }}
+              className="w-full bg-[#161b22] border border-slate-700 text-slate-200 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none truncate"
+            >
+              <option value="TODOS">Todos los Sectores</option>
+              {filtersMeta?.sectores?.map((s: string, idx: number) => (
+                <option key={idx} value={s} title={s}>
+                  {s.length > 28 ? s.substring(0, 28) + '...' : s}
+                </option>
+              ))}
+            </select>
+          </div>
+
         </div>
       </div>
 
@@ -565,7 +841,7 @@ export default function StatisticalAnalysisDashboard({
               {filteredCompanies.map(c => (
                 <button
                   key={c.nit}
-                  onClick={() => handleSelectCompany(c.nit)}
+                  onClick={() => handleSelectCompany(c.nit, c.razon_social)}
                   className={`w-full text-left py-2 px-3 hover:bg-slate-800/50 transition-colors text-xs flex flex-col gap-1 ${
                     selectedCompany === c.nit ? 'bg-indigo-500/10 border-l-2 border-indigo-500' : ''
                   }`}
@@ -578,7 +854,13 @@ export default function StatisticalAnalysisDashboard({
           </div>
 
           {/* Z-Scores y Tabla de Desviaciones */}
-          <div className="lg:col-span-3 bg-slate-900/30 p-6 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div className="lg:col-span-3 bg-slate-900/30 p-6 rounded-xl border border-slate-800 flex flex-col justify-between relative">
+            {loadingCompanyDetails && (
+              <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center rounded-xl z-20">
+                <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+              </div>
+            )}
+
             {gapAnalysis ? (
               <div className="space-y-6">
                 <div className="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -619,7 +901,7 @@ export default function StatisticalAnalysisDashboard({
                 </div>
               </div>
             ) : (
-              <div className="h-full flex flex-col items-center justify-center text-slate-500">
+              <div className="h-full flex flex-col items-center justify-center text-slate-500 py-8">
                 <HelpCircle className="w-12 h-12 mb-3 text-slate-600 animate-bounce" />
                 <p className="text-sm font-bold">Selecciona una empresa del panel lateral para iniciar el Análisis de Brecha</p>
                 <p className="text-[10px] text-slate-600">Compara métricas específicas contra percentiles regionales y sectoriales dinámicos</p>

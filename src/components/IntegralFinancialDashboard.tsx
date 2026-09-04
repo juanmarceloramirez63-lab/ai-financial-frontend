@@ -215,7 +215,27 @@ const MiniProgressBar: React.FC<{ percentage: number }> = ({ percentage = 0 }) =
   );
 };
 
-export default function IntegralFinancialDashboard() {
+interface IntegralDashboardProps {
+  onFiltersChange?: (filters: {
+    empresa: string;
+    nit: string;
+    sector: string;
+    tamano: string;
+    departamento: string;
+    ciudad: string;
+    anoInicio: number;
+    anoFin: number;
+  }) => void;
+  initialFilters?: {
+    departamento?: string;
+    ciudad?: string;
+    tamano?: string;
+    sector?: string;
+    ano?: string | number;
+  };
+}
+
+export default function IntegralFinancialDashboard({ onFiltersChange, initialFilters }: IntegralDashboardProps = {}) {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [filtersList, setFiltersList] = useState<any>(null);
@@ -230,10 +250,10 @@ export default function IntegralFinancialDashboard() {
   const [anoFin, setAnoFin] = useState(2025);
   const [selectedEmpresa, setSelectedEmpresa] = useState<string>("PELANAS SAS");
   const [selectedEmpresaNit, setSelectedEmpresaNit] = useState<string>("800000313");
-  const [selectedSector, setSelectedSector] = useState<string>("TODOS");
-  const [selectedTamano, setSelectedTamano] = useState<string>("TODOS");
-  const [selectedDepto, setSelectedDepto] = useState<string>("TODOS");
-  const [selectedCiudad, setSelectedCiudad] = useState<string>("TODOS");
+  const [selectedSector, setSelectedSector] = useState<string>(initialFilters?.sector || "TODOS");
+  const [selectedTamano, setSelectedTamano] = useState<string>(initialFilters?.tamano || "TODOS");
+  const [selectedDepto, setSelectedDepto] = useState<string>(initialFilters?.departamento || "TODOS");
+  const [selectedCiudad, setSelectedCiudad] = useState<string>(initialFilters?.ciudad || "TODOS");
   const compararCon = "Base de Datos del Sector";
   const [moneda, setMoneda] = useState<string>("COP");
   const [companySearch, setCompanySearch] = useState<string>("");
@@ -259,6 +279,22 @@ export default function IntegralFinancialDashboard() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Notificar cambios de filtros al componente padre si está suscrito
+  useEffect(() => {
+    if (onFiltersChange) {
+      onFiltersChange({
+        empresa: selectedEmpresa,
+        nit: selectedEmpresaNit,
+        sector: selectedSector,
+        tamano: selectedTamano,
+        departamento: selectedDepto,
+        ciudad: selectedCiudad,
+        anoInicio,
+        anoFin
+      });
+    }
+  }, [selectedEmpresa, selectedEmpresaNit, selectedSector, selectedTamano, selectedDepto, selectedCiudad, anoInicio, anoFin]);
 
   // Años disponibles
   const availableYears: number[] = useMemo(() => {
@@ -315,7 +351,7 @@ export default function IntegralFinancialDashboard() {
       if (res.ok) {
         const json = await res.json();
         setData(json);
-        if (json.empresa_info?.nit && json.empresa_info?.nit !== 'N/A') {
+        if (selectedEmpresa !== "TODAS" && json.empresa_info?.nit && json.empresa_info?.nit !== 'N/A') {
           setSelectedEmpresaNit(json.empresa_info.nit);
         }
       }
@@ -360,20 +396,39 @@ export default function IntegralFinancialDashboard() {
   };
 
   const handleSelectCompany = (c: any) => {
-    if (c === "TODAS") {
+    if (c === "TODAS" || (typeof c === 'object' && (c?.razon_social === "TODAS" || c?.nit === "TODAS"))) {
       setSelectedEmpresa("TODAS");
       setSelectedEmpresaNit("");
     } else {
       const name = typeof c === 'string' ? c : (c.razon_social || c.name);
-      const nit = typeof c === 'object' ? String(c.nit || '') : '';
+      let nit = typeof c === 'object' ? String(c.nit || '') : '';
+      if (!nit && filtersList?.empresas) {
+        const found = filtersList.empresas.find((emp: any) => (emp.razon_social || emp.name) === name || String(emp.nit) === name);
+        if (found) nit = String(found.nit || '');
+      }
       setSelectedEmpresa(name);
-      if (nit) setSelectedEmpresaNit(nit);
+      setSelectedEmpresaNit(nit);
     }
     setShowCompanyDropdown(false);
   };
 
-  const handleCompanySelect = (name: string, nit?: string) => {
-    handleSelectCompany(nit ? { razon_social: name, nit } : name);
+  const handleCompanySelect = (nameOrNit: string, nit?: string) => {
+    if (nameOrNit === "TODAS") {
+      handleSelectCompany("TODAS");
+      return;
+    }
+    if (nit) {
+      handleSelectCompany({ razon_social: nameOrNit, nit });
+      return;
+    }
+    if (filtersList?.empresas) {
+      const found = filtersList.empresas.find((emp: any) => String(emp.nit) === nameOrNit || (emp.razon_social || emp.name) === nameOrNit);
+      if (found) {
+        handleSelectCompany({ razon_social: found.razon_social || found.name, nit: found.nit });
+        return;
+      }
+    }
+    handleSelectCompany(nameOrNit);
   };
 
   // Empresas filtradas para el buscador con restricción de permisos por rol
@@ -787,13 +842,13 @@ export default function IntegralFinancialDashboard() {
                 />
               </div>
               <select
-                value={selectedEmpresa}
+                value={selectedEmpresaNit || (selectedEmpresa === "TODAS" ? "TODAS" : selectedEmpresa)}
                 onChange={(e) => handleCompanySelect(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500 truncate mt-1"
               >
                 <option value="TODAS">📊 TODAS (Población Agregada)</option>
-                {filtersList?.empresas?.map((emp: any) => (
-                  <option key={emp.nit} value={emp.razon_social}>
+                {companiesList?.map((emp: any) => (
+                  <option key={emp.nit} value={emp.nit}>
                     {emp.razon_social} (NIT: {emp.nit})
                   </option>
                 ))}

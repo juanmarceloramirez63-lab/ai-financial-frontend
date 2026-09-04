@@ -326,11 +326,14 @@ export default function Dashboard() {
             <StatisticalAnalysisDashboard 
               selectedDept={selectedDept}
               setSelectedDept={setSelectedDept}
+              selectedCiudad={selectedCiudad}
+              setSelectedCiudad={setSelectedCiudad}
               selectedTamano={selectedTamano}
               setSelectedTamano={setSelectedTamano}
               selectedYear={selectedAnos[0] || 'TODOS'}
               setSelectedYear={(yr: string) => setSelectedAnos(yr === 'TODOS' ? [] : [yr])}
               selectedCiiu={selectedCiiu}
+              setSelectedCiiu={setSelectedCiiu}
             />
           </div>
         ) : activeTab !== 'dashboard' ? (
