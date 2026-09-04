@@ -6,7 +6,7 @@ export const revalidate = 0;
 
 export async function GET() {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 3000); // 3-second timeout
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10-second timeout
 
   try {
     const backendUrl = BACKEND_URL;

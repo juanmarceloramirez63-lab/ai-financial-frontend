@@ -207,6 +207,13 @@ interface GeoProperties {
   divipola_n: number;
 }
 
+const DEPARTAMENTOS_COLOMBIA = [
+  "ANTIOQUIA", "ATLANTICO", "BOGOTA D.C.", "BOLIVAR", "BOYACA", "CALDAS", "CAQUETA", "CAUCA", "CESAR",
+  "CORDOBA", "CUNDINAMARCA", "CHOCO", "HUILA", "LA GUAJIRA", "MAGDALENA", "META", "NARIÑO",
+  "NORTE DE SANTANDER", "QUINDIO", "RISARALDA", "SANTANDER", "SUCRE", "TOLIMA", "VALLE DEL CAUCA",
+  "ARAUCA", "CASANARE", "PUTUMAYO", "SAN ANDRES Y PROVIDENCIA", "AMAZONAS", "GUAINIA", "GUAVIARE", "VAUPES", "VICHADA"
+];
+
 export default function BIDashboardExplorer({
   selectedTamano: propsTamano,
   setSelectedTamano: propsSetTamano,
@@ -216,6 +223,8 @@ export default function BIDashboardExplorer({
   setSelectedMacroSector: propsSetMacroSector,
   selectedAnos: propsAnos,
   setSelectedAnos: propsSetAnos,
+  selectedDept: propsDept,
+  setSelectedDept: propsSetDept,
   selectedCiudad: propsCiudad,
   setSelectedCiudad: propsSetCiudad
 }: any) {
@@ -240,6 +249,7 @@ export default function BIDashboardExplorer({
   const [localCiiu, setLocalCiiu] = useState<string>('TODOS');
   const [localMacroSector, setLocalMacroSector] = useState<string>('TODOS');
   const [localAnos, setLocalAnos] = useState<string[]>([]);
+  const [localDept, setLocalDept] = useState<string>('TODOS');
   const [localCiudad, setLocalCiudad] = useState<string>('TODOS');
   
   // Resolver estados activos
@@ -255,6 +265,9 @@ export default function BIDashboardExplorer({
   const selectedAnos = propsAnos !== undefined ? propsAnos : localAnos;
   const setSelectedAnos = propsSetAnos !== undefined ? propsSetAnos : setLocalAnos;
 
+  const selectedDept = propsDept !== undefined ? propsDept : localDept;
+  const setSelectedDept = propsSetDept !== undefined ? propsSetDept : setLocalDept;
+
   const selectedCiudad = propsCiudad !== undefined ? propsCiudad : localCiudad;
   const setSelectedCiudad = propsSetCiudad !== undefined ? propsSetCiudad : setLocalCiudad;
 
@@ -264,7 +277,7 @@ export default function BIDashboardExplorer({
   useEffect(() => {
     const CACHE_KEY = 'bi_dashboard_data_cache';
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000); // 12-second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
     
     const fetchData = async () => {
       try {
@@ -277,8 +290,7 @@ export default function BIDashboardExplorer({
         if (!response.ok) throw new Error("API falló");
         
         const data = await response.json();
-        if (Array.isArray(data)) {
-          // Pre-procesamiento inmediato
+        if (Array.isArray(data) && data.length > 0) {
           data.forEach(d => {
             d._normDept = normalizeName(d.departamento);
             d._normCity = normalizeName(d.ciudad);
@@ -286,34 +298,19 @@ export default function BIDashboardExplorer({
           setRealData(data);
           
           try {
-            // Guardar en caché local
             localStorage.setItem(CACHE_KEY, JSON.stringify(data));
             setUsingCache(false);
-          } catch (e) {
-            // Ignorar silenciosamente si excede cuota
-          }
+          } catch (e) {}
         }
       } catch (error) {
         clearTimeout(timeoutId);
-        // Fallback a caché
         try {
           const cached = localStorage.getItem(CACHE_KEY);
           if (cached) {
             setRealData(JSON.parse(cached));
             setUsingCache(true);
-          } else {
-            // Fallback a Mock si no hay caché
-            const mocked = [...MOCK_RAW_DATA];
-            mocked.forEach(d => {
-              d._normDept = normalizeName(d.departamento);
-              d._normCity = normalizeName(d.ciudad);
-            });
-            setRealData(mocked);
-            setUsingCache(true);
           }
-        } catch (cacheError) {
-          // Ignorar
-        }
+        } catch (cacheError) {}
       } finally {
         setIsLoading(false);
       }
@@ -325,12 +322,13 @@ export default function BIDashboardExplorer({
     };
   }, []);
 
-  const { tamanos, ciius, macroSectores, anos, ciudades } = useMemo(() => {
-    const t = new Set<string>();
+  const { tamanos, ciius, macroSectores, anos, ciudades, departamentos } = useMemo(() => {
+    const t = new Set<string>(['MICRO', 'PEQUEÑA', 'MEDIANA', 'GRANDE']);
     const c = new Set<string>();
-    const m = new Set<string>();
-    const a = new Set<string>();
+    const m = new Set<string>(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N']);
+    const a = new Set<string>(['2025', '2024', '2023', '2022', '2021', '2020', '2019', '2018', '2017', '2016', '2015']);
     const ciu = new Set<string>();
+    const dep = new Set<string>(DEPARTAMENTOS_COLOMBIA);
     
     const cleanYear = (yr: any): string => {
       if (!yr || yr === 'N/A') return '';
@@ -340,10 +338,13 @@ export default function BIDashboardExplorer({
     };
 
     realData.forEach(d => {
-      if (d.tamano && d.tamano !== 'N/A') t.add(d.tamano);
+      if (d.tamano && d.tamano !== 'N/A') t.add(d.tamano.toUpperCase());
       if (d.ciiu && d.ciiu !== 'N/A') {
         c.add(d.ciiu);
         m.add(d.ciiu.charAt(0).toUpperCase());
+      }
+      if (d.departamento && d.departamento !== 'N/A') {
+        dep.add(d.departamento.toUpperCase());
       }
       if (d.ciudad && d.ciudad !== 'N/A') {
         ciu.add(String(d.ciudad).trim().toUpperCase());
@@ -358,20 +359,32 @@ export default function BIDashboardExplorer({
       tamanos: Array.from(t).sort(),
       ciius: Array.from(c).sort(),
       macroSectores: Array.from(m).sort(),
-      anos: Array.from(a).sort((x, y) => Number(y) - Number(x)), // Sort descending (2024, 2023, ..., 2015)
-      ciudades: Array.from(ciu).sort()
+      anos: Array.from(a).sort((x, y) => Number(y) - Number(x)),
+      ciudades: Array.from(ciu).sort(),
+      departamentos: Array.from(dep).sort()
     };
   }, [realData]);
 
   const activeData = useMemo(() => {
     let data = realData.length > 0 ? realData : MOCK_RAW_DATA;
-    if (selectedTamano !== 'TODOS') {
-      data = data.filter(d => d.tamano === selectedTamano);
+
+    if (selectedDept && selectedDept !== 'TODOS') {
+      const normSelDept = normalizeName(selectedDept);
+      data = data.filter(d => {
+        const normD = d._normDept || normalizeName(d.departamento);
+        const normC = d._normCity || normalizeName(d.ciudad);
+        return normD === normSelDept || normD.includes(normSelDept) || CITY_TO_DEPT_MAP[normC]?.toLowerCase() === selectedDept.toLowerCase();
+      });
     }
-    if (selectedCiiu !== 'TODOS') {
+
+    if (selectedTamano && selectedTamano !== 'TODOS') {
+      const normTam = selectedTamano.toUpperCase().replace('Ñ', 'N');
+      data = data.filter(d => (d.tamano || '').toUpperCase().replace('Ñ', 'N').startsWith(normTam.slice(0, 4)));
+    }
+    if (selectedCiiu && selectedCiiu !== 'TODOS') {
       data = data.filter(d => d.ciiu === selectedCiiu);
     }
-    if (selectedMacroSector !== 'TODOS') {
+    if (selectedMacroSector && selectedMacroSector !== 'TODOS') {
       data = data.filter(d => d.ciiu && d.ciiu.charAt(0).toUpperCase() === selectedMacroSector);
     }
     if (selectedCiudad && selectedCiudad !== 'TODOS') {
@@ -386,7 +399,6 @@ export default function BIDashboardExplorer({
       return s;
     };
 
-    // Filter by selected years if any
     if (selectedAnos.length > 0) {
       data = data.filter(d => {
         const y = cleanYear(d.ano);
@@ -395,7 +407,7 @@ export default function BIDashboardExplorer({
     }
     
     return data;
-  }, [realData, selectedTamano, selectedCiiu, selectedMacroSector, selectedCiudad, selectedAnos]);
+  }, [realData, selectedDept, selectedTamano, selectedCiiu, selectedMacroSector, selectedCiudad, selectedAnos]);
 
   // 4. Lógica de Auditoría de Datos
   const auditReport = useMemo(() => {
@@ -684,15 +696,15 @@ export default function BIDashboardExplorer({
         </div>
 
         {/* Fila de Filtros Avanzados */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 pt-4 border-t border-[#4fc3f7]/10 z-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 pt-4 border-t border-[#4fc3f7]/10 z-10">
           
-          {/* Filtro Métrica */}
+          {/* 1. Filtro Métrica */}
           <div className="flex flex-col gap-1.5 bg-slate-900/50 p-3 rounded-lg border border-[#4fc3f7]/20">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Métrica de Análisis</span>
             <select
               value={metric}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setMetric(e.target.value as MetricKey)}
-              className="bg-transparent text-[#4fc3f7] text-sm font-bold outline-none cursor-pointer hover:text-[#4fc3f7]/80 transition-colors w-full"
+              className="bg-transparent text-[#4fc3f7] text-sm font-bold outline-none cursor-pointer hover:text-[#4fc3f7]/80 transition-colors w-full truncate"
             >
               {METRIC_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value} className="bg-[#000022] text-slate-200">
@@ -702,74 +714,25 @@ export default function BIDashboardExplorer({
             </select>
           </div>
 
-          {/* Filtro Año */}
-          <div className="flex flex-col gap-1.5 bg-slate-900/50 p-3 rounded-lg border border-[#4fc3f7]/20 relative">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Año de Análisis</span>
+          {/* 2. Filtro Departamento */}
+          <div className="flex flex-col gap-1.5 bg-slate-900/50 p-3 rounded-lg border border-[#4fc3f7]/20">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Departamento</span>
             <select
-              value={selectedAnos.length === 1 ? selectedAnos[0] : (selectedAnos.length === 0 ? 'TODOS' : selectedAnos[0])}
+              value={selectedDept}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                const val = e.target.value;
-                if (val === 'TODOS') {
-                  setSelectedAnos([]);
-                } else {
-                  setSelectedAnos([val]);
-                }
+                setSelectedDept(e.target.value);
+                setSelectedCiudad('TODOS');
               }}
-              className="bg-transparent text-[#ffff00] text-sm font-bold outline-none cursor-pointer hover:text-[#ffff00]/80 transition-colors w-full"
-            >
-              <option value="TODOS" className="bg-[#000022] text-slate-200">TODOS LOS AÑOS (SERIE COMPLETA)</option>
-              {anos.map(opt => (
-                <option key={opt} value={opt} className="bg-[#000022] text-slate-200">AÑO {opt}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Filtro Tamaño */}
-          <div className="flex flex-col gap-1.5 bg-slate-900/50 p-3 rounded-lg border border-[#4fc3f7]/20">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Tamaño Empresa</span>
-            <select
-              value={selectedTamano}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedTamano(e.target.value)}
-              className="bg-transparent text-[#4fc3f7] text-sm font-bold outline-none cursor-pointer hover:text-[#4fc3f7]/80 transition-colors w-full truncate"
-            >
-              <option value="TODOS" className="bg-[#000022] text-slate-200">TODOS</option>
-              {tamanos.map(opt => (
-                <option key={opt} value={opt} className="bg-[#000022] text-slate-200">{opt}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Filtro Macro Sector */}
-          <div className="flex flex-col gap-1.5 bg-slate-900/50 p-3 rounded-lg border border-[#4fc3f7]/20">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Macro Sector</span>
-            <select
-              value={selectedMacroSector}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedMacroSector(e.target.value)}
-              className="bg-transparent text-[#4fc3f7] text-sm font-bold outline-none cursor-pointer hover:text-[#4fc3f7]/80 transition-colors w-full truncate"
-            >
-              <option value="TODOS" className="bg-[#000022] text-slate-200">TODOS</option>
-              {macroSectores.map(opt => (
-                <option key={opt} value={opt} className="bg-[#000022] text-slate-200">Letra {opt}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Filtro CIIU */}
-          <div className="flex flex-col gap-1.5 bg-slate-900/50 p-3 rounded-lg border border-[#4fc3f7]/20">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Actividad CIIU</span>
-            <select
-              value={selectedCiiu}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedCiiu(e.target.value)}
               className="bg-transparent text-[#ffff00] text-sm font-bold outline-none cursor-pointer hover:text-[#ffff00]/80 transition-colors w-full truncate"
             >
-              <option value="TODOS" className="bg-[#000022] text-slate-200">TODOS</option>
-              {ciius.map(opt => (
+              <option value="TODOS" className="bg-[#000022] text-slate-200">TODOS LOS DEPTOS</option>
+              {departamentos.map(opt => (
                 <option key={opt} value={opt} className="bg-[#000022] text-slate-200">{opt}</option>
               ))}
             </select>
           </div>
 
-          {/* Filtro Ciudad */}
+          {/* 3. Filtro Ciudad */}
           <div className="flex flex-col gap-1.5 bg-slate-900/50 p-3 rounded-lg border border-[#4fc3f7]/20">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Ciudad / Municipio</span>
             <select
@@ -784,20 +747,108 @@ export default function BIDashboardExplorer({
             </select>
           </div>
 
+          {/* 4. Filtro Año */}
+          <div className="flex flex-col gap-1.5 bg-slate-900/50 p-3 rounded-lg border border-[#4fc3f7]/20 relative">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Año de Análisis</span>
+            <select
+              value={selectedAnos.length === 1 ? selectedAnos[0] : (selectedAnos.length === 0 ? 'TODOS' : selectedAnos[0])}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                const val = e.target.value;
+                if (val === 'TODOS') {
+                  setSelectedAnos([]);
+                } else {
+                  setSelectedAnos([val]);
+                }
+              }}
+              className="bg-transparent text-[#4fc3f7] text-sm font-bold outline-none cursor-pointer hover:text-[#4fc3f7]/80 transition-colors w-full truncate"
+            >
+              <option value="TODOS" className="bg-[#000022] text-slate-200">TODOS LOS AÑOS</option>
+              {anos.map(opt => (
+                <option key={opt} value={opt} className="bg-[#000022] text-slate-200">AÑO {opt}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* 5. Filtro Tamaño */}
+          <div className="flex flex-col gap-1.5 bg-slate-900/50 p-3 rounded-lg border border-[#4fc3f7]/20">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Tamaño Empresa</span>
+            <select
+              value={selectedTamano}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedTamano(e.target.value)}
+              className="bg-transparent text-[#4fc3f7] text-sm font-bold outline-none cursor-pointer hover:text-[#4fc3f7]/80 transition-colors w-full truncate"
+            >
+              <option value="TODOS" className="bg-[#000022] text-slate-200">TODOS</option>
+              {tamanos.map(opt => (
+                <option key={opt} value={opt} className="bg-[#000022] text-slate-200">{opt}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* 6. Filtro Macro Sector */}
+          <div className="flex flex-col gap-1.5 bg-slate-900/50 p-3 rounded-lg border border-[#4fc3f7]/20">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Macro Sector</span>
+            <select
+              value={selectedMacroSector}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedMacroSector(e.target.value)}
+              className="bg-transparent text-[#4fc3f7] text-sm font-bold outline-none cursor-pointer hover:text-[#4fc3f7]/80 transition-colors w-full truncate"
+            >
+              <option value="TODOS" className="bg-[#000022] text-slate-200">TODOS</option>
+              {macroSectores.map(opt => (
+                <option key={opt} value={opt} className="bg-[#000022] text-slate-200">Letra {opt}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* 7. Filtro CIIU */}
+          <div className="flex flex-col gap-1.5 bg-slate-900/50 p-3 rounded-lg border border-[#4fc3f7]/20">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Actividad CIIU</span>
+            <select
+              value={selectedCiiu}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedCiiu(e.target.value)}
+              className="bg-transparent text-[#ffff00] text-sm font-bold outline-none cursor-pointer hover:text-[#ffff00]/80 transition-colors w-full truncate"
+            >
+              <option value="TODOS" className="bg-[#000022] text-slate-200">TODOS</option>
+              {ciius.map(opt => (
+                <option key={opt} value={opt} className="bg-[#000022] text-slate-200">{opt}</option>
+              ))}
+            </select>
+          </div>
+
         </div>
+
+        {/* Barra de Filtros Activos y Restablecer */}
+        {(selectedDept !== 'TODOS' || selectedCiudad !== 'TODOS' || selectedTamano !== 'TODOS' || selectedCiiu !== 'TODOS' || selectedMacroSector !== 'TODOS' || selectedAnos.length > 0) && (
+          <div className="flex items-center justify-between bg-slate-900/60 px-4 py-2 rounded-lg border border-[#4fc3f7]/30 text-xs">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-bold text-[#4fc3f7] uppercase tracking-wider text-[10px]">Filtros Activos:</span>
+              {selectedDept !== 'TODOS' && <span className="bg-[#4fc3f7]/20 text-[#4fc3f7] px-2 py-0.5 rounded font-bold">Depto: {selectedDept}</span>}
+              {selectedCiudad !== 'TODOS' && <span className="bg-[#4fc3f7]/20 text-[#4fc3f7] px-2 py-0.5 rounded font-bold">Ciudad: {selectedCiudad}</span>}
+              {selectedTamano !== 'TODOS' && <span className="bg-[#4fc3f7]/20 text-[#4fc3f7] px-2 py-0.5 rounded font-bold">Tamaño: {selectedTamano}</span>}
+              {selectedAnos.length > 0 && <span className="bg-[#4fc3f7]/20 text-[#4fc3f7] px-2 py-0.5 rounded font-bold">Año: {selectedAnos.join(', ')}</span>}
+              {selectedMacroSector !== 'TODOS' && <span className="bg-[#4fc3f7]/20 text-[#4fc3f7] px-2 py-0.5 rounded font-bold">Macro: {selectedMacroSector}</span>}
+              {selectedCiiu !== 'TODOS' && <span className="bg-[#4fc3f7]/20 text-[#4fc3f7] px-2 py-0.5 rounded font-bold truncate max-w-[200px]">CIIU: {selectedCiiu}</span>}
+            </div>
+            <button
+              onClick={() => {
+                setSelectedDept('TODOS');
+                setSelectedCiudad('TODOS');
+                setSelectedTamano('TODOS');
+                setSelectedMacroSector('TODOS');
+                setSelectedCiiu('TODOS');
+                setSelectedAnos([]);
+              }}
+              className="text-xs text-rose-400 hover:text-rose-300 font-bold underline shrink-0 ml-3"
+            >
+              Restablecer Filtros
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-[#161b22] rounded-xl border border-slate-800 p-4 shadow-xl relative min-h-[600px] flex flex-col">
-          {/* Indicador de Data no Mapeada */}
+          {/* Indicador de Cobertura */}
           <div className="absolute top-6 left-6 z-10 flex flex-col gap-2 pointer-events-none">
-            <div className="bg-slate-900/80 backdrop-blur-md border border-rose-500/30 p-3 rounded-lg shadow-xl inline-flex items-center gap-3">
-              <div className="w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
-              <div>
-                <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest leading-none">Leakage Financiero (No Mapeado)</p>
-                <p className="text-lg font-mono font-black text-white">{formatFinancial(unmappedValue)}</p>
-              </div>
-            </div>
             <div className="bg-slate-900/80 backdrop-blur-md border border-emerald-500/30 p-3 rounded-lg shadow-xl inline-flex items-center gap-3">
               <div className="w-2 h-2 bg-emerald-500 rounded-full" />
               <div>
@@ -811,19 +862,7 @@ export default function BIDashboardExplorer({
             {isLoading ? (
               <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/50 backdrop-blur-sm">
                 <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
-                <p className="text-slate-400 font-bold animate-pulse">CARGANDO DATA REAL (MARCHA BLANCA)...</p>
-              </div>
-            ) : stopProcess ? (
-              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-rose-950/80 backdrop-blur-md p-8 text-center">
-                <ShieldAlert className="w-20 h-20 text-rose-500 mb-6 animate-bounce" />
-                <h2 className="text-3xl font-black text-white mb-2">PROCESO DETENIDO: ALTO LEAKAGE</h2>
-                <p className="text-rose-200 max-w-md text-lg">
-                  El subregistro financiero ha superado el <b>15% ({leakagePercentage.toFixed(1)}%)</b>. 
-                  Por seguridad de auditoría, la visualización está bloqueada hasta corregir los diccionarios de ciudades.
-                </p>
-                <div className="mt-8 px-6 py-3 bg-rose-500 text-white font-black rounded-lg shadow-xl">
-                  {formatFinancial(unmappedValue)} NO IDENTIFICADOS
-                </div>
+                <p className="text-slate-400 font-bold animate-pulse">CARGANDO DATOS...</p>
               </div>
             ) : null}
             <ComposableMap
@@ -839,29 +878,37 @@ export default function BIDashboardExplorer({
 
                     const regionData = level === 'dept' ? aggregatedData.find(d => d.id === divipolaCode) : null;
                     const val = regionData ? regionData[metric] : 0;
+                    const isSelected = selectedDept !== 'TODOS' && regionData && regionData.name.toUpperCase() === selectedDept.toUpperCase();
 
                     return (
                       <Geography
                         key={geo.rsmKey}
                         geography={geo}
+                        onClick={() => {
+                          if (regionData) {
+                            setSelectedDept(selectedDept.toUpperCase() === regionData.name.toUpperCase() ? 'TODOS' : regionData.name);
+                          }
+                        }}
                         onMouseEnter={() => regionData && setTooltipContent(regionData)}
                         onMouseLeave={() => setTooltipContent(null)}
                         style={{
                           default: {
-                            fill: level === 'dept'
+                            fill: isSelected
+                              ? "#ffff00"
+                              : level === 'dept'
                               ? (regionData ? colorScale(val) : "#000033")
                               : "#000022",
-                            stroke: level === 'dept' ? "#000033" : "#4fc3f7",
-                            strokeWidth: 0.5,
+                            stroke: isSelected ? "#fff" : level === 'dept' ? "#000033" : "#4fc3f7",
+                            strokeWidth: isSelected ? 2 : 0.5,
                             outline: "none",
                             transition: "all 0.3s"
                           },
                           hover: {
                             fill: level === 'dept' ? "#4fc3f7" : "#000044",
                             stroke: "#fff",
-                            strokeWidth: 1,
+                            strokeWidth: 1.5,
                             outline: "none",
-                            cursor: level === 'dept' ? "pointer" : "default"
+                            cursor: "pointer"
                           },
                           pressed: { fill: "#000044", outline: "none" },
                         }}
@@ -877,15 +924,17 @@ export default function BIDashboardExplorer({
                 .map((city) => {
                 if (!city.coordinates) return null;
                 const val = city[metric];
+                const isSelectedCity = selectedCiudad !== 'TODOS' && city.name.toUpperCase() === selectedCiudad.toUpperCase();
                 return (
                   <Marker key={city.id} coordinates={city.coordinates}>
                     <circle
                       r={radiusScale(val)}
-                      fill={colorScale(val)}
-                      fillOpacity={0.7}
+                      fill={isSelectedCity ? "#ffff00" : colorScale(val)}
+                      fillOpacity={isSelectedCity ? 1 : 0.7}
                       stroke="#fff"
-                      strokeWidth={1}
+                      strokeWidth={isSelectedCity ? 2 : 1}
                       className="cursor-pointer hover:fill-[#4fc3f7] transition-all duration-300"
+                      onClick={() => setSelectedCiudad(selectedCiudad.toUpperCase() === city.name.toUpperCase() ? 'TODOS' : city.name)}
                       onMouseEnter={() => setTooltipContent(city)}
                       onMouseLeave={() => setTooltipContent(null)}
                     />

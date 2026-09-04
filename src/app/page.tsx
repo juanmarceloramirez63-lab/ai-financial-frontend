@@ -319,6 +319,8 @@ export default function Dashboard() {
               setSelectedAnos={setSelectedAnos}
               selectedCiudad={selectedCiudad}
               setSelectedCiudad={setSelectedCiudad}
+              selectedDept={selectedDept}
+              setSelectedDept={setSelectedDept}
             />
           </div>
         ) : activeTab === 'stats' ? (

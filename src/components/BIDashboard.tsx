@@ -8,7 +8,8 @@ export default function BIDashboard({
   selectedCiiu, setSelectedCiiu, 
   selectedMacroSector, setSelectedMacroSector, 
   selectedAnos, setSelectedAnos,
-  selectedCiudad, setSelectedCiudad
+  selectedCiudad, setSelectedCiudad,
+  selectedDept, setSelectedDept
 }: any) {
   return (
     <BIDashboardExplorer 
@@ -22,6 +23,8 @@ export default function BIDashboard({
       setSelectedAnos={setSelectedAnos}
       selectedCiudad={selectedCiudad}
       setSelectedCiudad={setSelectedCiudad}
+      selectedDept={selectedDept}
+      setSelectedDept={setSelectedDept}
     />
   );
 }

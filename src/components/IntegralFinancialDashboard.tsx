@@ -215,6 +215,32 @@ const MiniProgressBar: React.FC<{ percentage: number }> = ({ percentage = 0 }) =
   );
 };
 
+const DEFAULT_DEPARTAMENTOS = [
+  'BOGOTA D.C.', 'ANTIOQUIA', 'VALLE DEL CAUCA', 'CUNDINAMARCA', 'SANTANDER',
+  'ATLANTICO', 'BOLIVAR', 'BOYACA', 'CALDAS', 'CASANARE', 'CAUCA', 'CESAR',
+  'CORDOBA', 'HUILA', 'LA GUAJIRA', 'MAGDALENA', 'META', 'NARINO',
+  'NORTE DE SANTANDER', 'QUINDIO', 'RISARALDA', 'SAN ANDRES Y PROVIDENCIA',
+  'SUCRE', 'TOLIMA', 'AMAZONAS', 'ARAUCA', 'CAQUETA', 'CHOCO', 'GUAINIA',
+  'GUAVIARE', 'PUTUMAYO', 'VAUPES', 'VICHADA'
+];
+
+const DEFAULT_ANIOS = [2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015];
+
+const DEFAULT_SECTORES = [
+  "Comercio al por mayor y al por menor; reparación de vehículos",
+  "Industrias manufactureras",
+  "Construcción",
+  "Agricultura, ganadería, caza, silvicultura y pesca",
+  "Transporte y almacenamiento",
+  "Información y comunicaciones",
+  "Actividades inmobiliarias",
+  "Actividades profesionales, científicas y técnicas",
+  "Actividades de servicios administrativos y de apoyo",
+  "Alojamiento y servicios de comida",
+  "Suministro de electricidad, gas, vapor y aire acondicionado",
+  "Explotación de minas y canteras"
+];
+
 interface IntegralDashboardProps {
   onFiltersChange?: (filters: {
     empresa: string;
@@ -298,16 +324,15 @@ export default function IntegralFinancialDashboard({ onFiltersChange, initialFil
 
   // Años disponibles
   const availableYears: number[] = useMemo(() => {
-    return filtersList?.anios || [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025];
+    return filtersList?.anios && filtersList.anios.length > 0 ? filtersList.anios : DEFAULT_ANIOS;
   }, [filtersList]);
 
   // Ciudades disponibles dinámicamente filtradas por departamento seleccionado
   const availableCiudades = useMemo(() => {
-    if (!filtersList) return [];
-    if (selectedDepto !== "TODOS" && filtersList.ciudades_por_departamento && filtersList.ciudades_por_departamento[selectedDepto]) {
+    if (selectedDepto !== "TODOS" && filtersList?.ciudades_por_departamento && filtersList.ciudades_por_departamento[selectedDepto]) {
       return filtersList.ciudades_por_departamento[selectedDepto];
     }
-    return filtersList.ciudades || [];
+    return filtersList?.ciudades || [];
   }, [filtersList, selectedDepto]);
 
   // Cargar lista de filtros disponibles (años, empresas, sectores, ciudades)
@@ -465,30 +490,37 @@ export default function IntegralFinancialDashboard({ onFiltersChange, initialFil
     return count;
   }, [selectedEmpresa, selectedSector, selectedTamano, selectedDepto, anoInicio, anoFin]);
 
-  // Formato monetario
+  // Formato monetario (con soporte dinámico para USD y COP)
+  const FX_RATE_USD = 4000;
+
   const fmtMoney = (val: number) => {
-    if (val === undefined || val === null || isNaN(val)) return "$ 0";
-    const abs = Math.abs(val);
-    if (abs >= 1e9) return `$ ${(val / 1e9).toFixed(3)} B`;
-    if (abs >= 1e6) return `$ ${(val / 1e6).toFixed(3)} M`;
-    if (abs >= 1e3) return `$ ${(val / 1e3).toFixed(1)} K`;
-    return `$ ${val.toLocaleString('es-CO', { maximumFractionDigits: 0 })}`;
+    if (val === undefined || val === null || isNaN(val)) return moneda === 'USD' ? "US$ 0" : "$ 0";
+    const adjusted = moneda === 'USD' ? val / FX_RATE_USD : val;
+    const prefix = moneda === 'USD' ? 'US$' : '$';
+    const abs = Math.abs(adjusted);
+    if (abs >= 1e9) return `${prefix} ${(adjusted / 1e9).toFixed(3)} B`;
+    if (abs >= 1e6) return `${prefix} ${(adjusted / 1e6).toFixed(3)} M`;
+    if (abs >= 1e3) return `${prefix} ${(adjusted / 1e3).toFixed(1)} K`;
+    return `${prefix} ${adjusted.toLocaleString('es-CO', { maximumFractionDigits: 0 })}`;
   };
 
   // Formato compacto para barras de gráficos (evita que se desborden)
   const fmtShort = (val: number) => {
-    if (val === undefined || val === null || isNaN(val)) return "$0";
-    const abs = Math.abs(val);
-    const sign = val < 0 ? "-" : "";
-    if (abs >= 1e9) return `${sign}$${(abs / 1e9).toFixed(1)}B`;
-    if (abs >= 1e6) return `${sign}$${(abs / 1e6).toFixed(1)}M`;
-    if (abs >= 1e3) return `${sign}$${(abs / 1e3).toFixed(0)}K`;
-    return `${sign}$${abs.toFixed(0)}`;
+    if (val === undefined || val === null || isNaN(val)) return moneda === 'USD' ? "US$0" : "$0";
+    const adjusted = moneda === 'USD' ? val / FX_RATE_USD : val;
+    const prefix = moneda === 'USD' ? 'US$' : '$';
+    const abs = Math.abs(adjusted);
+    const sign = adjusted < 0 ? "-" : "";
+    if (abs >= 1e9) return `${sign}${prefix}${(abs / 1e9).toFixed(1)}B`;
+    if (abs >= 1e6) return `${sign}${prefix}${(abs / 1e6).toFixed(1)}M`;
+    if (abs >= 1e3) return `${sign}${prefix}${(abs / 1e3).toFixed(0)}K`;
+    return `${sign}${prefix}${abs.toFixed(0)}`;
   };
 
   const fmtThousands = (val: number) => {
     if (val === undefined || val === null || isNaN(val)) return "0";
-    return (val / 1000).toLocaleString('es-CO', { maximumFractionDigits: 0 });
+    const adjusted = moneda === 'USD' ? val / FX_RATE_USD : val;
+    return (adjusted / 1000).toLocaleString('es-CO', { maximumFractionDigits: 0 });
   };
 
   // Exportar a CSV
@@ -921,15 +953,15 @@ export default function IntegralFinancialDashboard({ onFiltersChange, initialFil
             {/* 4. FILTRO: SECTOR ECONÓMICO / CIIU (LISTA COMPLETA) */}
             <div className="space-y-1">
               <label className="text-[11px] font-bold text-slate-700 uppercase tracking-tight block">
-                Sector Económico / CIIU ({filtersList?.sectores?.length || 460} sectores)
+                Sector Económico / CIIU ({filtersList?.sectores?.length || DEFAULT_SECTORES.length} sectores)
               </label>
               <select
                 value={selectedSector}
                 onChange={(e) => setSelectedSector(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500 truncate"
               >
-                <option value="TODOS">Todos los Sectores ({filtersList?.sectores?.length || 460})</option>
-                {filtersList?.sectores?.map((sec: string, idx: number) => (
+                <option value="TODOS">Todos los Sectores ({filtersList?.sectores?.length || DEFAULT_SECTORES.length})</option>
+                {(filtersList?.sectores && filtersList.sectores.length > 0 ? filtersList.sectores : DEFAULT_SECTORES).map((sec: string, idx: number) => (
                   <option key={idx} value={sec} title={sec}>
                     {sec.length > 38 ? sec.substring(0, 38) + '...' : sec}
                   </option>
@@ -940,7 +972,7 @@ export default function IntegralFinancialDashboard({ onFiltersChange, initialFil
             {/* 5. FILTRO: DEPARTAMENTO */}
             <div className="space-y-1">
               <label className="text-[11px] font-bold text-slate-700 uppercase tracking-tight block">
-                Departamento ({filtersList?.departamentos?.length || 32} departamentos)
+                Departamento ({filtersList?.departamentos?.length || DEFAULT_DEPARTAMENTOS.length} departamentos)
               </label>
               <select
                 value={selectedDepto}
@@ -951,7 +983,7 @@ export default function IntegralFinancialDashboard({ onFiltersChange, initialFil
                 className="w-full bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500 truncate"
               >
                 <option value="TODOS">Todos los Departamentos</option>
-                {filtersList?.departamentos?.map((d: string, idx: number) => (
+                {(filtersList?.departamentos && filtersList.departamentos.length > 0 ? filtersList.departamentos : DEFAULT_DEPARTAMENTOS).map((d: string, idx: number) => (
                   <option key={idx} value={d}>{d}</option>
                 ))}
               </select>

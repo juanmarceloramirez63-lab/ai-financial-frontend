@@ -12,16 +12,18 @@ export default function ClientDirectory({ onSelectClient }: { onSelectClient: (c
     setIsLoading(true);
     setError(null);
     try {
-      // Intentamos cargar desde un endpoint del backend (que crearemos luego si es necesario)
-      // Por ahora, como es frontend, simulamos la llamada. En producción deberías tener un GET /api/clientes
-      const response = await fetch(`/api/clientes`);
-      if (!response.ok) {
-        throw new Error('Endpoint /api/clientes no disponible');
+      let res = await fetch(`${BACKEND_URL}/api/clientes`, { cache: 'no-store' }).catch(() => null);
+      if (!res || !res.ok) {
+        res = await fetch(`/api/clientes`, { cache: 'no-store' }).catch(() => null);
       }
-      const data = await response.json();
-      setClients(data.clientes || []);
+      if (res && res.ok) {
+        const data = await res.json();
+        setClients(data.clientes || []);
+      } else {
+        setClients([]);
+      }
     } catch (err: any) {
-      console.error(err);
+      console.error("Error al cargar clientes:", err);
       setError('No se pudo conectar a la base de datos de clientes.');
     } finally {
       setIsLoading(false);

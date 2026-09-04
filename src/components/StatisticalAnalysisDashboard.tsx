@@ -10,6 +10,32 @@ import {
 
 import IntegralFinancialDashboard from './IntegralFinancialDashboard';
 
+const DEFAULT_DEPARTAMENTOS = [
+  'BOGOTA D.C.', 'ANTIOQUIA', 'VALLE DEL CAUCA', 'CUNDINAMARCA', 'SANTANDER',
+  'ATLANTICO', 'BOLIVAR', 'BOYACA', 'CALDAS', 'CASANARE', 'CAUCA', 'CESAR',
+  'CORDOBA', 'HUILA', 'LA GUAJIRA', 'MAGDALENA', 'META', 'NARINO',
+  'NORTE DE SANTANDER', 'QUINDIO', 'RISARALDA', 'SAN ANDRES Y PROVIDENCIA',
+  'SUCRE', 'TOLIMA', 'AMAZONAS', 'ARAUCA', 'CAQUETA', 'CHOCO', 'GUAINIA',
+  'GUAVIARE', 'PUTUMAYO', 'VAUPES', 'VICHADA'
+];
+
+const DEFAULT_ANIOS = [2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015];
+
+const DEFAULT_SECTORES = [
+  "Comercio al por mayor y al por menor; reparación de vehículos",
+  "Industrias manufactureras",
+  "Construcción",
+  "Agricultura, ganadería, caza, silvicultura y pesca",
+  "Transporte y almacenamiento",
+  "Información y comunicaciones",
+  "Actividades inmobiliarias",
+  "Actividades profesionales, científicas y técnicas",
+  "Actividades de servicios administrativos y de apoyo",
+  "Alojamiento y servicios de comida",
+  "Suministro de electricidad, gas, vapor y aire acondicionado",
+  "Explotación de minas y canteras"
+];
+
 interface StatItem {
   id: string;
   name: string;
@@ -134,11 +160,10 @@ export default function StatisticalAnalysisDashboard({
 
   // Lista de ciudades disponibles dinámicamente según el departamento seleccionado
   const availableCities = useMemo(() => {
-    if (!filtersMeta) return [];
-    if (activeDept !== "TODOS" && filtersMeta.ciudades_por_departamento && filtersMeta.ciudades_por_departamento[activeDept]) {
+    if (activeDept !== "TODOS" && filtersMeta?.ciudades_por_departamento && filtersMeta.ciudades_por_departamento[activeDept]) {
       return filtersMeta.ciudades_por_departamento[activeDept];
     }
-    return filtersMeta.ciudades || [];
+    return filtersMeta?.ciudades || [];
   }, [filtersMeta, activeDept]);
 
   // Manejar sincronización de filtros desde el Dashboard Integral
@@ -491,7 +516,7 @@ export default function StatisticalAnalysisDashboard({
               className="w-full bg-[#161b22] border border-slate-700 text-slate-200 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none truncate"
             >
               <option value="TODOS">Todos los Deptos</option>
-              {filtersMeta?.departamentos?.map((d: string, idx: number) => (
+              {(filtersMeta?.departamentos && filtersMeta.departamentos.length > 0 ? filtersMeta.departamentos : DEFAULT_DEPARTAMENTOS).map((d: string, idx: number) => (
                 <option key={idx} value={d}>{d}</option>
               ))}
             </select>
@@ -555,7 +580,7 @@ export default function StatisticalAnalysisDashboard({
               className="w-full bg-[#161b22] border border-slate-700 text-slate-200 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             >
               <option value="TODOS">Todos los Años</option>
-              {filtersMeta?.anios?.map((y: number) => (
+              {(filtersMeta?.anios && filtersMeta.anios.length > 0 ? filtersMeta.anios : DEFAULT_ANIOS).map((y: number) => (
                 <option key={y} value={y.toString()}>{y}</option>
               ))}
             </select>
@@ -576,7 +601,7 @@ export default function StatisticalAnalysisDashboard({
               className="w-full bg-[#161b22] border border-slate-700 text-slate-200 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none truncate"
             >
               <option value="TODOS">Todos los Sectores</option>
-              {filtersMeta?.sectores?.map((s: string, idx: number) => (
+              {(filtersMeta?.sectores && filtersMeta.sectores.length > 0 ? filtersMeta.sectores : DEFAULT_SECTORES).map((s: string, idx: number) => (
                 <option key={idx} value={s} title={s}>
                   {s.length > 28 ? s.substring(0, 28) + '...' : s}
                 </option>
