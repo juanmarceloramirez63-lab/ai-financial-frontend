@@ -6,7 +6,7 @@ import { BACKEND_URL } from '../lib/config';
 const Plot = dynamic(() => import('./PlotlyWrapper'), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 h-96 rounded-xl flex items-center justify-center text-slate-500 font-bold">Cargando gráfico interactivo...</div> });
 
 import { ComposableMap, Geographies, Geography, Marker } from 'react-simple-maps';
-import { scaleLinear } from 'd3-scale';
+import { scaleLinear, scalePow } from 'd3-scale';
 import {
   interpolateReds,
   interpolateBlues,
@@ -142,29 +142,40 @@ interface MetricOption {
 type AnalysisLevel = 'dept' | 'city';
 
 // 3. Datos Maestros (Mock Raw Data)
+// 3. Datos Maestros Completos de los 32 Departamentos + Bogotá D.C.
 const MOCK_RAW_DATA: RawFinancialRecord[] = [
-  // Cobertura Nacional Expandida
-  { departamento: "Cundinamarca", ciudad: "Bogotá", empresas: 4520, activos: 85400000000, ingresos: 62100000000, utilidad: 5400000000, patrimonio: 42000000000, pasivos: 43400000000, tamano: "GRANDE", ciiu: "C1011", ano: "2024" },
-  { departamento: "Antioquia", ciudad: "Medellín", empresas: 2800, activos: 58200000000, ingresos: 42500000000, utilidad: 2900000000, patrimonio: 28000000000, pasivos: 30200000000, tamano: "MEDIANA", ciiu: "G4690", ano: "2024" },
-  { departamento: "Valle del Cauca", ciudad: "Cali", empresas: 1650, activos: 28100000000, ingresos: 19400000000, utilidad: 1100000000, patrimonio: 13400000000, pasivos: 14700000000, tamano: "PEQUEÑA", ciiu: "F4290", ano: "2024" },
-  { departamento: "Atlántico", ciudad: "Barranquilla", empresas: 1100, activos: 16500000000, ingresos: 10100000000, utilidad: 750000000, patrimonio: 8200000000, pasivos: 8300000000, tamano: "MICRO", ciiu: "A0114", ano: "2024" },
-  { departamento: "Caldas", ciudad: "Manizales", empresas: 450, activos: 8500000000, ingresos: 5100000000, utilidad: 250000000, patrimonio: 4100000000, pasivos: 4400000000, tamano: "PEQUEÑA", ciiu: "M7310", ano: "2024" },
-  { departamento: "Santander", ciudad: "Bucaramanga", empresas: 820, activos: 11400000000, ingresos: 7500000000, utilidad: 350000000, patrimonio: 5100000000, pasivos: 6300000000, tamano: "MEDIANA", ciiu: "C3290", ano: "2024" },
-  { departamento: "Huila", ciudad: "Neiva", empresas: 380, activos: 4200000000, ingresos: 3100000000, utilidad: 120000000, patrimonio: 2100000000, pasivos: 2100000000, tamano: "MICRO", ciiu: "G4690", ano: "2024" },
-  { departamento: "Bolívar", ciudad: "Cartagena", empresas: 920, activos: 12400000000, ingresos: 8500000000, utilidad: 410000000, patrimonio: 6100000000, pasivos: 6300000000, tamano: "GRANDE", ciiu: "F4290", ano: "2024" },
-  { departamento: "Nariño", ciudad: "Pasto", empresas: 310, activos: 3100000000, ingresos: 2100000000, utilidad: 90000000, patrimonio: 1500000000, pasivos: 1600000000, ano: "2024" },
-  { departamento: "Magdalena", ciudad: "Santa Marta", empresas: 440, activos: 5200000000, ingresos: 4100000000, utilidad: 180000000, patrimonio: 2600000000, pasivos: 2600000000, ano: "2024" },
-  { departamento: "Meta", ciudad: "Villavicencio", empresas: 510, activos: 6100000000, ingresos: 5200000000, utilidad: 210000000, patrimonio: 3100000000, pasivos: 3000000000, ano: "2024" },
-  { departamento: "Casanare", ciudad: "Yopal", empresas: 220, activos: 2100000000, ingresos: 1800000000, utilidad: 60000000, patrimonio: 1100000000, pasivos: 1000000000, ano: "2024" },
-  { departamento: "Cauca", ciudad: "Popayán", empresas: 280, activos: 2800000000, ingresos: 2100000000, utilidad: 80000000, patrimonio: 1400000000, pasivos: 1400000000, ano: "2024" },
-  { departamento: "Chocó", ciudad: "Quibdó", empresas: 110, activos: 1100000000, ingresos: 800000000, utilidad: 30000000, patrimonio: 550000000, pasivos: 550000000, ano: "2024" },
-  { departamento: "Boyacá", ciudad: "Tunja", empresas: 350, activos: 3500000000, ingresos: 2500000000, utilidad: 110000000, patrimonio: 1750000000, pasivos: 1750000000, ano: "2024" },
-  { departamento: "Amazonas", ciudad: "Leticia", empresas: 80, activos: 850000000, ingresos: 620000000, utilidad: 25000000, patrimonio: 420000000, pasivos: 430000000, ano: "2024" },
-  { departamento: "Tolima", ciudad: "Ibagué", empresas: 620, activos: 7100000000, ingresos: 5400000000, utilidad: 280000000, patrimonio: 3500000000, pasivos: 3600000000, ano: "2024" },
-  { departamento: "Norte de Santander", ciudad: "Cúcuta", empresas: 710, activos: 8200000000, ingresos: 6100000000, utilidad: 310000000, patrimonio: 4100000000, pasivos: 4100000000, ano: "2024" },
-  { departamento: "Arauca", ciudad: "Arauca", empresas: 95, activos: 950000000, ingresos: 710000000, utilidad: 32000000, patrimonio: 475000000, pasivos: 475000000, ano: "2024" },
-  { departamento: "La Guajira", ciudad: "Riohacha", empresas: 180, activos: 1800000000, ingresos: 1400000000, utilidad: 52000000, patrimonio: 900000000, pasivos: 900000000, ano: "2024" },
-  { departamento: "San Andrés", ciudad: "San Andrés", empresas: 140, activos: 2400000000, ingresos: 1900000000, utilidad: 110000000, patrimonio: 1200000000, pasivos: 1200000000, ano: "2024" }
+  { departamento: "Cundinamarca", ciudad: "Bogotá", empresas: 14520, activos: 95400000000, ingresos: 74200000000, utilidad: 6400000000, patrimonio: 48000000000, pasivos: 47400000000, tamano: "GRANDE", ciiu: "C1011", ano: "2024" },
+  { departamento: "Antioquia", ciudad: "Medellín", empresas: 8800, activos: 68200000000, ingresos: 45800000000, utilidad: 3900000000, patrimonio: 34000000000, pasivos: 34200000000, tamano: "GRANDE", ciiu: "G4690", ano: "2024" },
+  { departamento: "Valle del Cauca", ciudad: "Cali", empresas: 4650, activos: 34100000000, ingresos: 24100000000, utilidad: 1900000000, patrimonio: 16400000000, pasivos: 17700000000, tamano: "MEDIANA", ciiu: "F4290", ano: "2024" },
+  { departamento: "Santander", ciudad: "Bucaramanga", empresas: 2820, activos: 21400000000, ingresos: 15500000000, utilidad: 1150000000, patrimonio: 10100000000, pasivos: 11300000000, tamano: "MEDIANA", ciiu: "C3290", ano: "2024" },
+  { departamento: "Atlántico", ciudad: "Barranquilla", empresas: 2600, activos: 18500000000, ingresos: 12100000000, utilidad: 950000000, patrimonio: 9200000000, pasivos: 9300000000, tamano: "MEDIANA", ciiu: "A0114", ano: "2024" },
+  { departamento: "Bolívar", ciudad: "Cartagena", empresas: 1920, activos: 15400000000, ingresos: 9500000000, utilidad: 710000000, patrimonio: 7100000000, pasivos: 8300000000, tamano: "MEDIANA", ciiu: "F4290", ano: "2024" },
+  { departamento: "Risaralda", ciudad: "Pereira", empresas: 1450, activos: 9800000000, ingresos: 6800000000, utilidad: 450000000, patrimonio: 4600000000, pasivos: 5200000000, tamano: "PEQUEÑA", ciiu: "G4690", ano: "2024" },
+  { departamento: "Norte de Santander", ciudad: "Cúcuta", empresas: 1210, activos: 8900000000, ingresos: 6100000000, utilidad: 380000000, patrimonio: 4300000000, pasivos: 4600000000, tamano: "PEQUEÑA", ciiu: "C1011", ano: "2024" },
+  { departamento: "Tolima", ciudad: "Ibagué", empresas: 1120, activos: 7900000000, ingresos: 5400000000, utilidad: 340000000, patrimonio: 3800000000, pasivos: 4100000000, tamano: "PEQUEÑA", ciiu: "A0114", ano: "2024" },
+  { departamento: "Meta", ciudad: "Villavicencio", empresas: 1050, activos: 7600000000, ingresos: 5200000000, utilidad: 320000000, patrimonio: 3600000000, pasivos: 4000000000, tamano: "PEQUEÑA", ciiu: "A0114", ano: "2024" },
+  { departamento: "Caldas", ciudad: "Manizales", empresas: 980, activos: 7400000000, ingresos: 5100000000, utilidad: 310000000, patrimonio: 3500000000, pasivos: 3900000000, tamano: "PEQUEÑA", ciiu: "M7310", ano: "2024" },
+  { departamento: "Magdalena", ciudad: "Santa Marta", empresas: 840, activos: 5900000000, ingresos: 4100000000, utilidad: 240000000, patrimonio: 2800000000, pasivos: 3100000000, tamano: "PEQUEÑA", ciiu: "I5610", ano: "2024" },
+  { departamento: "Córdoba", ciudad: "Montería", empresas: 760, activos: 5300000000, ingresos: 3700000000, utilidad: 210000000, patrimonio: 2500000000, pasivos: 2800000000, tamano: "PEQUEÑA", ciiu: "A0114", ano: "2024" },
+  { departamento: "Cesar", ciudad: "Valledupar", empresas: 710, activos: 4900000000, ingresos: 3400000000, utilidad: 190000000, patrimonio: 2300000000, pasivos: 2600000000, tamano: "PEQUEÑA", ciiu: "G4690", ano: "2024" },
+  { departamento: "Huila", ciudad: "Neiva", empresas: 680, activos: 4600000000, ingresos: 3100000000, utilidad: 170000000, patrimonio: 2200000000, pasivos: 2400000000, tamano: "PEQUEÑA", ciiu: "G4690", ano: "2024" },
+  { departamento: "Quindío", ciudad: "Armenia", empresas: 620, activos: 4100000000, ingresos: 2800000000, utilidad: 150000000, patrimonio: 1900000000, pasivos: 2200000000, tamano: "PEQUEÑA", ciiu: "M7310", ano: "2024" },
+  { departamento: "Boyacá", ciudad: "Tunja", empresas: 590, activos: 3800000000, ingresos: 2500000000, utilidad: 140000000, patrimonio: 1800000000, pasivos: 2000000000, tamano: "PEQUEÑA", ciiu: "C2395", ano: "2024" },
+  { departamento: "Cauca", ciudad: "Popayán", empresas: 520, activos: 3200000000, ingresos: 2100000000, utilidad: 110000000, patrimonio: 1500000000, pasivos: 1700000000, tamano: "MICRO", ciiu: "A0114", ano: "2024" },
+  { departamento: "Nariño", ciudad: "Pasto", empresas: 490, activos: 3100000000, ingresos: 2100000000, utilidad: 110000000, patrimonio: 1450000000, pasivos: 1650000000, tamano: "MICRO", ciiu: "G4690", ano: "2024" },
+  { departamento: "Sucre", ciudad: "Sincelejo", empresas: 420, activos: 2600000000, ingresos: 1800000000, utilidad: 95000000, patrimonio: 1200000000, pasivos: 1400000000, tamano: "MICRO", ciiu: "A0114", ano: "2024" },
+  { departamento: "Casanare", ciudad: "Yopal", empresas: 380, activos: 2400000000, ingresos: 1800000000, utilidad: 90000000, patrimonio: 1100000000, pasivos: 1300000000, tamano: "MICRO", ciiu: "H4923", ano: "2024" },
+  { departamento: "La Guajira", ciudad: "Riohacha", empresas: 310, activos: 2100000000, ingresos: 1400000000, utilidad: 75000000, patrimonio: 950000000, pasivos: 1150000000, tamano: "MICRO", ciiu: "B0510", ano: "2024" },
+  { departamento: "San Andrés", ciudad: "San Andrés", empresas: 260, activos: 2400000000, ingresos: 1900000000, utilidad: 120000000, patrimonio: 1150000000, pasivos: 1250000000, tamano: "MICRO", ciiu: "I5510", ano: "2024" },
+  { departamento: "Chocó", ciudad: "Quibdó", empresas: 240, activos: 1400000000, ingresos: 950000000, utilidad: 45000000, patrimonio: 650000000, pasivos: 750000000, tamano: "MICRO", ciiu: "G4711", ano: "2024" },
+  { departamento: "Caquetá", ciudad: "Florencia", empresas: 220, activos: 1300000000, ingresos: 880000000, utilidad: 40000000, patrimonio: 600000000, pasivos: 700000000, tamano: "MICRO", ciiu: "A0114", ano: "2024" },
+  { departamento: "Putumayo", ciudad: "Mocoa", empresas: 180, activos: 1100000000, ingresos: 750000000, utilidad: 35000000, patrimonio: 500000000, pasivos: 600000000, tamano: "MICRO", ciiu: "G4690", ano: "2024" },
+  { departamento: "Arauca", ciudad: "Arauca", empresas: 160, activos: 1050000000, ingresos: 710000000, utilidad: 32000000, patrimonio: 480000000, pasivos: 570000000, tamano: "MICRO", ciiu: "A0114", ano: "2024" },
+  { departamento: "Amazonas", ciudad: "Leticia", empresas: 130, activos: 850000000, ingresos: 620000000, utilidad: 28000000, patrimonio: 400000000, pasivos: 450000000, tamano: "MICRO", ciiu: "G4711", ano: "2024" },
+  { departamento: "Guaviare", ciudad: "San José del Guaviare", empresas: 110, activos: 680000000, ingresos: 480000000, utilidad: 21000000, patrimonio: 310000000, pasivos: 370000000, tamano: "MICRO", ciiu: "A0114", ano: "2024" },
+  { departamento: "Vichada", ciudad: "Puerto Carreño", empresas: 90, activos: 560000000, ingresos: 390000000, utilidad: 17000000, patrimonio: 250000000, pasivos: 310000000, tamano: "MICRO", ciiu: "A0114", ano: "2024" },
+  { departamento: "Guainía", ciudad: "Inírida", empresas: 80, activos: 480000000, ingresos: 330000000, utilidad: 14000000, patrimonio: 210000000, pasivos: 270000000, tamano: "MICRO", ciiu: "G4711", ano: "2024" },
+  { departamento: "Vaupés", ciudad: "Mitú", empresas: 70, activos: 410000000, ingresos: 280000000, utilidad: 12000000, patrimonio: 180000000, pasivos: 230000000, tamano: "MICRO", ciiu: "G4711", ano: "2024" }
 ];
 
 const METRIC_OPTIONS: MetricOption[] = [
@@ -212,8 +223,17 @@ export default function BIDashboardExplorer({
   const [level, setLevel] = useState<AnalysisLevel>('dept');
   const [tooltipContent, setTooltipContent] = useState<AggregatedData | null>(null);
   const [showAudit, setShowAudit] = useState(false);
-  const [realData, setRealData] = useState<RawFinancialRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  
+  // Inicializar inmediatamente con el dataset completo para render instantáneo en 0s
+  const [realData, setRealData] = useState<RawFinancialRecord[]>(() => {
+    const initial = [...MOCK_RAW_DATA];
+    initial.forEach(d => {
+      d._normDept = normalizeName(d.departamento);
+      d._normCity = normalizeName(d.ciudad);
+    });
+    return initial;
+  });
+  const [isLoading, setIsLoading] = useState(false);
   
   // Estados locales alternativos en caso de no recibir props
   const [localTamano, setLocalTamano] = useState<string>('TODOS');
@@ -535,11 +555,19 @@ export default function BIDashboardExplorer({
   }, [aggregatedData, metric]);
 
   const colorScale = useMemo(() => {
-    // Custom color scale based on the logo palette
-    // Deep Navy -> Cyan -> Yellow
-    return scaleLinear<string>()
-      .domain([minVal, minVal + (maxVal - minVal) * 0.5, maxVal])
-      .range(["#003366", "#4fc3f7", "#ffff00"]);
+    // Non-linear power scale (exponent 0.35) with multi-stop vibrant spectrum
+    // Allows medium and small departments to display rich cyan, green, amber colors instead of dark navy.
+    return scalePow<string>()
+      .exponent(0.35)
+      .domain([
+        minVal,
+        minVal + (maxVal - minVal) * 0.05,
+        minVal + (maxVal - minVal) * 0.15,
+        minVal + (maxVal - minVal) * 0.35,
+        minVal + (maxVal - minVal) * 0.65,
+        maxVal
+      ])
+      .range(["#1e3a8a", "#0284c7", "#06b6d4", "#10b981", "#fbbf24", "#f59e0b"]);
   }, [maxVal, minVal]);
 
   const radiusScale = useMemo(() => {
