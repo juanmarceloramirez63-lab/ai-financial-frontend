@@ -28,6 +28,9 @@ interface AuthContextType {
   isCliente: boolean;
   signIn: (email: string, pass: string) => Promise<{ error: any }>;
   signUp: (email: string, pass: string, nombre: string, rol?: UserRole) => Promise<{ error: any }>;
+  signInWithGoogle: () => Promise<{ error: any }>;
+  resetPassword: (email: string) => Promise<{ error: any }>;
+  updatePassword: (newPass: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -42,6 +45,9 @@ const AuthContext = createContext<AuthContextType>({
   isCliente: false,
   signIn: async () => ({ error: null }),
   signUp: async () => ({ error: null }),
+  signInWithGoogle: async () => ({ error: null }),
+  resetPassword: async () => ({ error: null }),
+  updatePassword: async () => ({ error: null }),
   signOut: async () => {},
   refreshProfile: async () => {},
 });
@@ -52,7 +58,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string, userEmail: string) => {
+  const fetchProfile = async (userId: string, userEmail: string, userMetadata?: any) => {
     try {
       const { data, error } = await supabase
         .from('perfiles_usuarios')
@@ -62,10 +68,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (error && error.code === 'PGRST116') {
         // Perfil no existe aún, crearlo por defecto
+        const nombreSugerido = userMetadata?.full_name || userMetadata?.name || userEmail.split('@')[0];
         const defaultProfile: UserProfile = {
           id: userId,
           email: userEmail,
-          nombre_completo: userEmail.split('@')[0],
+          nombre_completo: nombreSugerido,
           rol: userEmail.includes('admin') || userEmail.includes('juan') ? 'super_admin' : 'cliente',
           estado: 'activo',
           nits_permitidos: []
@@ -87,7 +94,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          await fetchProfile(session.user.id, session.user.email || '');
+          await fetchProfile(session.user.id, session.user.email || '', session.user.user_metadata);
         }
       } catch (e) {
         console.error('Error inicializando auth:', e);
@@ -102,7 +109,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        await fetchProfile(session.user.id, session.user.email || '');
+        await fetchProfile(session.user.id, session.user.email || '', session.user.user_metadata);
       } else {
         setProfile(null);
       }
@@ -120,7 +127,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       password: pass
     });
     if (!res.error && res.data.user) {
-      await fetchProfile(res.data.user.id, res.data.user.email || '');
+      await fetchProfile(res.data.user.id, res.data.user.email || '', res.data.user.user_metadata);
     }
     return { error: res.error };
   };
@@ -139,6 +146,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return { error: res.error };
   };
 
+  const signInWithGoogle = async () => {
+    const redirectUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const res = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectUrl
+      }
+    });
+    return { error: res.error };
+  };
+
+  const resetPassword = async (email: string) => {
+    const redirectUrl = typeof window !== 'undefined' ? `${window.location.origin}/?reset=true` : '';
+    const res = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectUrl
+    });
+    return { error: res.error };
+  };
+
+  const updatePassword = async (newPass: string) => {
+    const res = await supabase.auth.updateUser({
+      password: newPass
+    });
+    return { error: res.error };
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -148,7 +181,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const refreshProfile = async () => {
     if (user) {
-      await fetchProfile(user.id, user.email || '');
+      await fetchProfile(user.id, user.email || '', user.user_metadata);
     }
   };
 
@@ -168,6 +201,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         isCliente,
         signIn,
         signUp,
+        signInWithGoogle,
+        resetPassword,
+        updatePassword,
         signOut,
         refreshProfile
       }}
