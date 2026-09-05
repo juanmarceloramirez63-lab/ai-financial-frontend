@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "../lib/AuthContext";
-import AppAuthGuard from "../components/AppAuthGuard";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -33,11 +31,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <AuthProvider>
-          <AppAuthGuard>
-            {children}
-          </AppAuthGuard>
-        </AuthProvider>
+        {children}
       </body>
     </html>
   );

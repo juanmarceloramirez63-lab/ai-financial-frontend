@@ -39,10 +39,6 @@ const initialFinancialData = {
 import ClientDirectory from '../components/ClientDirectory';
 import DetailedFinancialMatrix from '../components/DetailedFinancialMatrix';
 import RawFinancialStatementsMatrix from '../components/RawFinancialStatementsMatrix';
-import LoginWall from '../components/LoginWall';
-import UserManagementModal from '../components/UserManagementModal';
-import { useAuth } from '../lib/AuthContext';
-import { Shield, User as UserIcon, LogOut as LogOutIcon, Key, Users } from 'lucide-react';
 
 const initialRawData = [
   {
@@ -109,9 +105,6 @@ const initialMatrixData = [
 ];
 
 export default function Dashboard() {
-  const { user, profile, isSuperAdmin, signOut, loading: authLoading } = useAuth();
-  const [showUserModal, setShowUserModal] = useState(false);
-
   const [activeTab, setActiveTab] = useState('directorio');
   const [financialData, setFinancialData] = useState<any>(initialFinancialData);
   const [rawData, setRawData] = useState<any>(null);
@@ -225,34 +218,9 @@ export default function Dashboard() {
       }))
     : [];
 
-  if (authLoading) {
-    return (
-      <div className="h-screen w-full bg-[#000033] flex flex-col items-center justify-center text-white space-y-4 font-sans">
-        <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-sm text-slate-300 font-semibold tracking-wide">Verificando sesión segura...</p>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <LoginWall />;
-  }
-
-  const roleLabels: Record<string, { name: string; bg: string }> = {
-    super_admin: { name: 'Super Admin', bg: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
-    analista: { name: 'Analista', bg: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
-    cliente: { name: 'Cliente', bg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
-    demo: { name: 'Demo', bg: 'bg-amber-500/20 text-amber-300 border-amber-500/30' }
-  };
-
-  const activeRole = roleLabels[profile?.rol || 'cliente'] || roleLabels.cliente;
-
   return (
     <div className="flex h-screen bg-[#000033] text-slate-200 font-sans overflow-hidden">
       
-      {/* MODAL DE GESTIÓN DE USUARIOS */}
-      <UserManagementModal isOpen={showUserModal} onClose={() => setShowUserModal(false)} />
-
       {/* SIDEBAR */}
       <aside className="w-64 bg-[#000022] border-r border-[#4fc3f7]/20 flex flex-col hidden md:flex">
         <div className="p-4 flex items-center justify-center border-b border-slate-800/50">
@@ -273,43 +241,8 @@ export default function Dashboard() {
           <NavItem icon={<AlertTriangle size={20} />} label="Alertas Fraude" active={activeTab === 'fraude'} onClick={() => setActiveTab('fraude')} />
         </nav>
         
-        {/* PERFIL DEL USUARIO Y ACCIONES EN EL PIE DEL SIDEBAR */}
-        <div className="p-4 border-t border-slate-800 space-y-2 bg-[#00001a]">
-          <div className="flex items-center gap-3 p-2 bg-slate-900/90 rounded-xl border border-slate-800">
-            <div className="w-9 h-9 rounded-lg bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-300 font-bold shrink-0">
-              {profile?.nombre_completo ? profile.nombre_completo.charAt(0).toUpperCase() : (user.email ? user.email.charAt(0).toUpperCase() : 'U')}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-white truncate block">
-                  {profile?.nombre_completo || user.email?.split('@')[0]}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className={`px-1.5 py-0.2 text-[9px] font-black uppercase rounded border ${activeRole.bg}`}>
-                  {activeRole.name}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {isSuperAdmin && (
-            <button
-              onClick={() => setShowUserModal(true)}
-              className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 text-xs font-bold rounded-lg border border-purple-500/30 transition-all cursor-pointer"
-            >
-              <Users size={15} />
-              <span>Gestión Usuarios & Roles</span>
-            </button>
-          )}
-
-          <button
-            onClick={signOut}
-            className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 text-xs font-bold rounded-lg border border-rose-500/20 transition-all cursor-pointer"
-          >
-            <LogOutIcon size={15} />
-            <span>Cerrar Sesión</span>
-          </button>
+        <div className="p-4 border-t border-slate-800 space-y-2">
+          <NavItem icon={<Settings size={20} />} label="Configuración" />
         </div>
       </aside>
 
@@ -343,10 +276,6 @@ export default function Dashboard() {
           </div>
           
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 bg-[#000022] border border-slate-700/80 px-3 py-1.5 rounded-lg text-xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="text-slate-300 font-mono">{user.email}</span>
-            </div>
             <button className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition-colors font-medium shadow-lg shadow-indigo-500/20">
               <Download size={18} />
               Exportar PDF
