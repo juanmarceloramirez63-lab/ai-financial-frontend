@@ -486,14 +486,14 @@ export default function IntegralFinancialDashboard({ onFiltersChange, initialFil
   }, [rawCompaniesList, profile]);
   const filteredCompanies = useMemo(() => {
     if (!companiesList.length) return [];
-    if (!companySearch || !companySearch.trim()) return companiesList.slice(0, 100);
+    if (!companySearch || !companySearch.trim()) return companiesList.slice(0, 200);
     const searchLower = companySearch.toLowerCase().trim();
     return companiesList.filter((c: any) => {
       if (typeof c === 'string') return c.toLowerCase().includes(searchLower);
       const nameMatch = c.razon_social ? c.razon_social.toLowerCase().includes(searchLower) : false;
       const nitMatch = c.nit ? String(c.nit).includes(searchLower) : false;
       return nameMatch || nitMatch;
-    }).slice(0, 100);
+    }).slice(0, 200);
   }, [companiesList, companySearch]);
 
   const activeFiltersCount = useMemo(() => {
@@ -677,6 +677,10 @@ export default function IntegralFinancialDashboard({ onFiltersChange, initialFil
                       </button>
                     );
                   })}
+                </div>
+                <div className="pt-2 border-t border-slate-200 text-[10px] text-slate-500 flex items-center justify-between px-1">
+                  <span>Mostrando {filteredCompanies.length} de {companiesList.length.toLocaleString('es-CO')} empresas</span>
+                  <span className="text-indigo-600 font-medium">Búsqueda reactiva activa</span>
                 </div>
               </div>
             )}
