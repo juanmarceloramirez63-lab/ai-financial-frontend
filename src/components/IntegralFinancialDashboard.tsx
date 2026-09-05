@@ -339,8 +339,11 @@ export default function IntegralFinancialDashboard({ onFiltersChange, initialFil
   useEffect(() => {
     async function fetchFilters() {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/bi/filters`);
-        if (res.ok) {
+        let res = await fetch(`${BACKEND_URL}/api/bi/filters`, { cache: 'no-store' }).catch(() => null);
+        if (!res || !res.ok) {
+          res = await fetch(`/api/bi/filters`, { cache: 'no-store' }).catch(() => null);
+        }
+        if (res && res.ok) {
           const json = await res.json();
           setFiltersList(json);
         }
@@ -367,13 +370,23 @@ export default function IntegralFinancialDashboard({ onFiltersChange, initialFil
         comparar_con: "Base de Datos del Sector"
       };
 
-      const res = await fetch(`${BACKEND_URL}/api/bi/integral-dashboard`, {
+      let res = await fetch(`${BACKEND_URL}/api/bi/integral-dashboard`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+        body: JSON.stringify(payload),
+        cache: 'no-store'
+      }).catch(() => null);
 
-      if (res.ok) {
+      if (!res || !res.ok) {
+        res = await fetch(`/api/bi/integral-dashboard`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          cache: 'no-store'
+        }).catch(() => null);
+      }
+
+      if (res && res.ok) {
         const json = await res.json();
         setData(json);
         if (selectedEmpresa !== "TODAS" && json.empresa_info?.nit && json.empresa_info?.nit !== 'N/A') {

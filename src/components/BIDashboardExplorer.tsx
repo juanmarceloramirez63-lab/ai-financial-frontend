@@ -273,6 +273,27 @@ export default function BIDashboardExplorer({
 
   const [usingCache, setUsingCache] = useState(false);
 
+  const [filtersMeta, setFiltersMeta] = useState<any>(null);
+
+  // Cargar metadatos de filtros completos
+  useEffect(() => {
+    const loadFilters = async () => {
+      try {
+        let res = await fetch(`${BACKEND_URL}/api/bi/filters`, { cache: 'no-store' }).catch(() => null);
+        if (!res || !res.ok) {
+          res = await fetch(`/api/bi/filters`, { cache: 'no-store' }).catch(() => null);
+        }
+        if (res && res.ok) {
+          const json = await res.json();
+          setFiltersMeta(json);
+        }
+      } catch (err) {
+        console.error("Error cargando filtros en BI Explorer:", err);
+      }
+    };
+    loadFilters();
+  }, []);
+
   // 4. Conexión a API y Caché (Fase Producción)
   useEffect(() => {
     const CACHE_KEY = 'bi_dashboard_data_cache';
@@ -282,12 +303,20 @@ export default function BIDashboardExplorer({
     const fetchData = async () => {
       try {
         const backendUrl = BACKEND_URL;
-        const response = await fetch(`${backendUrl}/api/bi/raw?limit=200000`, { 
+        let response = await fetch(`${backendUrl}/api/bi/raw?limit=200000`, { 
           cache: 'no-store',
           signal: controller.signal 
-        });
+        }).catch(() => null);
+
+        if (!response || !response.ok) {
+          response = await fetch(`/api/bi/raw?limit=200000`, {
+            cache: 'no-store',
+            signal: controller.signal
+          }).catch(() => null);
+        }
+        
         clearTimeout(timeoutId);
-        if (!response.ok) throw new Error("API falló");
+        if (!response || !response.ok) throw new Error("API falló");
         
         const data = await response.json();
         if (Array.isArray(data) && data.length > 0) {
@@ -323,12 +352,12 @@ export default function BIDashboardExplorer({
   }, []);
 
   const { tamanos, ciius, macroSectores, anos, ciudades, departamentos } = useMemo(() => {
-    const t = new Set<string>(['MICRO', 'PEQUEÑA', 'MEDIANA', 'GRANDE']);
-    const c = new Set<string>();
+    const t = new Set<string>(filtersMeta?.tamanos || ['MICRO', 'PEQUEÑA', 'MEDIANA', 'GRANDE']);
+    const c = new Set<string>(filtersMeta?.sectores || []);
     const m = new Set<string>(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N']);
-    const a = new Set<string>(['2025', '2024', '2023', '2022', '2021', '2020', '2019', '2018', '2017', '2016', '2015']);
-    const ciu = new Set<string>();
-    const dep = new Set<string>(DEPARTAMENTOS_COLOMBIA);
+    const a = new Set<string>((filtersMeta?.anios || [2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015]).map(String));
+    const ciu = new Set<string>(filtersMeta?.ciudades || []);
+    const dep = new Set<string>(filtersMeta?.departamentos || DEPARTAMENTOS_COLOMBIA);
     
     const cleanYear = (yr: any): string => {
       if (!yr || yr === 'N/A') return '';
@@ -363,7 +392,7 @@ export default function BIDashboardExplorer({
       ciudades: Array.from(ciu).sort(),
       departamentos: Array.from(dep).sort()
     };
-  }, [realData]);
+  }, [realData, filtersMeta]);
 
   const activeData = useMemo(() => {
     let data = realData.length > 0 ? realData : MOCK_RAW_DATA;

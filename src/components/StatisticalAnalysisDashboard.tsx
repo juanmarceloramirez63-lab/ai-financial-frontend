@@ -146,8 +146,11 @@ export default function StatisticalAnalysisDashboard({
   useEffect(() => {
     async function loadFilterOptions() {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/bi/filters`);
-        if (res.ok) {
+        let res = await fetch(`${BACKEND_URL}/api/bi/filters`, { cache: 'no-store' }).catch(() => null);
+        if (!res || !res.ok) {
+          res = await fetch(`/api/bi/filters`, { cache: 'no-store' }).catch(() => null);
+        }
+        if (res && res.ok) {
           const json = await res.json();
           setFiltersMeta(json);
         }
@@ -208,14 +211,23 @@ export default function StatisticalAnalysisDashboard({
       if (activeYear && activeYear !== 'TODOS') payload.anio = parseInt(activeYear);
       if (activeCiiu && activeCiiu !== 'TODOS') payload.sector = activeCiiu;
 
-      const res = await fetch(`${BACKEND_URL}/api/bi/stats`, {
+      let res = await fetch(`${BACKEND_URL}/api/bi/stats`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
         cache: 'no-store'
-      });
+      }).catch(() => null);
 
-      if (res.ok) {
+      if (!res || !res.ok) {
+        res = await fetch(`/api/bi/stats`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          cache: 'no-store'
+        }).catch(() => null);
+      }
+
+      if (res && res.ok) {
         const data = await res.json();
         if (data.error) {
           setStatsData([]);
