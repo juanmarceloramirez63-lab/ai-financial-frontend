@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 import { 
   LayoutDashboard, FileText, AlertTriangle, TrendingUp, 
-  Settings, LogOut, FileSearch, Building2, Download, Database
+  Settings, LogOut, FileSearch, Building2, Download, Database, Activity
 } from 'lucide-react';
 import UploadDocument from '../components/UploadDocument';
 import FraudDashboard from '../components/FraudDashboard';
@@ -16,9 +16,9 @@ import HumanInTheLoopForm from '../components/HumanInTheLoopForm';
 import dynamic from 'next/dynamic';
 import { BACKEND_URL } from '../lib/config';
 
-// ... (keep dynamic import of BIDashboard)
 const BIDashboard = dynamic(() => import('../components/BIDashboard'), { ssr: false });
 const StatisticalAnalysisDashboard = dynamic(() => import('../components/StatisticalAnalysisDashboard'), { ssr: false });
+const IntegralFinancialDashboard = dynamic(() => import('../components/IntegralFinancialDashboard'), { ssr: false });
 
 // INITIAL DUMMY DATA FROM OUR PYTHON BACKEND
 const initialFinancialData = {
@@ -232,6 +232,7 @@ export default function Dashboard() {
         </div>
         
         <nav className="flex-1 px-4 space-y-1 mt-4 overflow-y-auto">
+          <NavItem icon={<Activity size={20} />} label="Dashboard Integral (37K PYMES)" active={activeTab === 'integral'} onClick={() => setActiveTab('integral')} />
           <NavItem icon={<LayoutDashboard size={20} />} label="Portafolio Clientes" active={activeTab === 'directorio'} onClick={() => setActiveTab('directorio')} />
           <NavItem icon={<LayoutDashboard size={20} />} label="Resultados Auditoría" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
           <NavItem icon={<FileSearch size={20} />} label="Analizar Nuevo Doc" active={activeTab === 'analizar'} onClick={() => { setActiveTab('analizar'); setIsValidating(false); }} />
@@ -255,6 +256,7 @@ export default function Dashboard() {
           <div>
             <div className="flex items-baseline gap-3">
               <h2 className="text-2xl font-semibold text-white">
+                {activeTab === 'integral' && "Dashboard Financiero Integral (37,000+ PYMES & 10 Años)"}
                 {activeTab === 'directorio' && "Portafolio de Clientes (Supabase)"}
                 {activeTab === 'dashboard' && "Resultados de Auditoría"}
                 {activeTab === 'analizar' && "Analizar Nuevo Documento"}
@@ -266,6 +268,7 @@ export default function Dashboard() {
               </h2>
             </div>
             <p className="text-sm text-slate-400">
+              {activeTab === 'integral' ? "Filtros en cascada, tacómetros semicirculares, estados financieros comparativos, flujo de caja y heatmap histórico" : ""}
               {activeTab === 'directorio' ? "Base de datos maestra de PYMES analizadas" : ""}
               {activeTab === 'dashboard' ? "Datos extraídos y analizados en tiempo real por IA" : ""}
               {activeTab === 'analizar' ? "Sube tus estados financieros aquí" : ""}
@@ -284,7 +287,11 @@ export default function Dashboard() {
         </header>
 
         {/* DYNAMIC CONTENT */}
-        {activeTab === 'directorio' ? (
+        {activeTab === 'integral' ? (
+          <div className="flex-1 flex flex-col overflow-y-auto p-4 md:p-8 bg-[#000033]">
+            <IntegralFinancialDashboard />
+          </div>
+        ) : activeTab === 'directorio' ? (
           <ClientDirectory onSelectClient={handleSelectClient} />
         ) : activeTab === 'analizar' ? (
           <div className="flex-1 flex flex-col p-8 overflow-hidden">
