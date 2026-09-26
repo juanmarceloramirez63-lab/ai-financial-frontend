@@ -18,7 +18,6 @@ import { BACKEND_URL } from '../lib/config';
 
 const BIDashboard = dynamic(() => import('../components/BIDashboard'), { ssr: false });
 const StatisticalAnalysisDashboard = dynamic(() => import('../components/StatisticalAnalysisDashboard'), { ssr: false });
-const IntegralFinancialDashboard = dynamic(() => import('../components/IntegralFinancialDashboard'), { ssr: false });
 
 // INITIAL DUMMY DATA FROM OUR PYTHON BACKEND
 const initialFinancialData = {
@@ -105,7 +104,7 @@ const initialMatrixData = [
 ];
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState('directorio');
+  const [activeTab, setActiveTab] = useState('stats');
   const [financialData, setFinancialData] = useState<any>(initialFinancialData);
   const [rawData, setRawData] = useState<any>(null);
   const [fraudData, setFraudData] = useState<any>(null);
@@ -232,12 +231,11 @@ export default function Dashboard() {
         </div>
         
         <nav className="flex-1 px-4 space-y-1 mt-4 overflow-y-auto">
-          <NavItem icon={<Activity size={20} />} label="Dashboard Integral (37K PYMES)" active={activeTab === 'integral'} onClick={() => setActiveTab('integral')} />
+          <NavItem icon={<TrendingUp size={20} />} label="Estadísticas de Impacto" active={activeTab === 'stats'} onClick={() => setActiveTab('stats')} />
           <NavItem icon={<LayoutDashboard size={20} />} label="Portafolio Clientes" active={activeTab === 'directorio'} onClick={() => setActiveTab('directorio')} />
           <NavItem icon={<LayoutDashboard size={20} />} label="Resultados Auditoría" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
           <NavItem icon={<FileSearch size={20} />} label="Analizar Nuevo Doc" active={activeTab === 'analizar'} onClick={() => { setActiveTab('analizar'); setIsValidating(false); }} />
           <NavItem icon={<Database size={20} />} label="BI Explorador" active={activeTab === 'bi'} onClick={() => setActiveTab('bi')} />
-          <NavItem icon={<TrendingUp size={20} />} label="Estadísticas e Impacto" active={activeTab === 'stats'} onClick={() => setActiveTab('stats')} />
           <NavItem icon={<Building2 size={20} />} label="Histórico Sectorial" active={activeTab === 'historico'} onClick={() => setActiveTab('historico')} />
           <NavItem icon={<AlertTriangle size={20} />} label="Alertas Fraude" active={activeTab === 'fraude'} onClick={() => setActiveTab('fraude')} />
         </nav>
@@ -256,24 +254,22 @@ export default function Dashboard() {
           <div>
             <div className="flex items-baseline gap-3">
               <h2 className="text-2xl font-semibold text-white">
-                {activeTab === 'integral' && "Dashboard Financiero Integral (37,000+ PYMES & 10 Años)"}
+                {activeTab === 'stats' && "Estadísticas de Impacto y Diagnóstico Financiero"}
                 {activeTab === 'directorio' && "Portafolio de Clientes (Supabase)"}
                 {activeTab === 'dashboard' && "Resultados de Auditoría"}
                 {activeTab === 'analizar' && "Analizar Nuevo Documento"}
                 {activeTab === 'historico' && "Benchmarking Sectorial"}
                 {activeTab === 'bi' && "Explorador de Inteligencia de Negocios"}
-                {activeTab === 'stats' && "Análisis Estadístico e Impacto Financiero"}
                 {activeTab === 'fraude' && "Auditoría y Fraude"}
                 {activeTab === 'informe' && "Reportes Inteligentes"}
               </h2>
             </div>
             <p className="text-sm text-slate-400">
-              {activeTab === 'integral' ? "Filtros en cascada, tacómetros semicirculares, estados financieros comparativos, flujo de caja y heatmap histórico" : ""}
+              {activeTab === 'stats' ? "Filtros interactivos, tacómetros, comparativo histórico, benchmarking por desviaciones estándar y simulación de estrés" : ""}
               {activeTab === 'directorio' ? "Base de datos maestra de PYMES analizadas" : ""}
               {activeTab === 'dashboard' ? "Datos extraídos y analizados en tiempo real por IA" : ""}
               {activeTab === 'analizar' ? "Sube tus estados financieros aquí" : ""}
               {activeTab === 'bi' ? "Procesamiento de Big Data en tiempo real de toda tu base de datos" : ""}
-              {activeTab === 'stats' ? "Estadísticas descriptivas, benchmarking por desviaciones estándar y simulación de estrés macroeconómico" : ""}
               {(activeTab === 'historico' || activeTab === 'fraude' || activeTab === 'informe') ? "Módulo en construcción (Fases 2 y 3)" : ""}
             </p>
           </div>
@@ -287,9 +283,20 @@ export default function Dashboard() {
         </header>
 
         {/* DYNAMIC CONTENT */}
-        {activeTab === 'integral' ? (
-          <div className="flex-1 flex flex-col overflow-y-auto p-4 md:p-8 bg-[#000033]">
-            <IntegralFinancialDashboard />
+        {activeTab === 'stats' ? (
+          <div className="flex-1 flex flex-col overflow-y-auto">
+            <StatisticalAnalysisDashboard 
+              selectedDept={selectedDept}
+              setSelectedDept={setSelectedDept}
+              selectedCiudad={selectedCiudad}
+              setSelectedCiudad={setSelectedCiudad}
+              selectedTamano={selectedTamano}
+              setSelectedTamano={setSelectedTamano}
+              selectedYear={selectedAnos[0] || 'TODOS'}
+              setSelectedYear={(yr: string) => setSelectedAnos(yr === 'TODOS' ? [] : [yr])}
+              selectedCiiu={selectedCiiu}
+              setSelectedCiiu={setSelectedCiiu}
+            />
           </div>
         ) : activeTab === 'directorio' ? (
           <ClientDirectory onSelectClient={handleSelectClient} />
@@ -330,21 +337,6 @@ export default function Dashboard() {
               setSelectedCiudad={setSelectedCiudad}
               selectedDept={selectedDept}
               setSelectedDept={setSelectedDept}
-            />
-          </div>
-        ) : activeTab === 'stats' ? (
-          <div className="flex-1 flex flex-col overflow-y-auto">
-            <StatisticalAnalysisDashboard 
-              selectedDept={selectedDept}
-              setSelectedDept={setSelectedDept}
-              selectedCiudad={selectedCiudad}
-              setSelectedCiudad={setSelectedCiudad}
-              selectedTamano={selectedTamano}
-              setSelectedTamano={setSelectedTamano}
-              selectedYear={selectedAnos[0] || 'TODOS'}
-              setSelectedYear={(yr: string) => setSelectedAnos(yr === 'TODOS' ? [] : [yr])}
-              selectedCiiu={selectedCiiu}
-              setSelectedCiiu={setSelectedCiiu}
             />
           </div>
         ) : activeTab !== 'dashboard' ? (
