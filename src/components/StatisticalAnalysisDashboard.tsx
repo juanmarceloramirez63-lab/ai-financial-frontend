@@ -194,9 +194,11 @@ export default function StatisticalAnalysisDashboard({
     }
   }, [setSelectedDept, setSelectedCiudad, setSelectedTamano, setSelectedCiiu, setSelectedYear]);
 
+  const lastStatsPayloadRef = useRef<string>('');
+  const companyCacheRef = useRef<Map<string, any>>(new Map());
+
   // Cargar datos del análisis estadístico
   const loadStats = async () => {
-    setLoading(true);
     try {
       const payload: any = {
         shocks: {
@@ -211,10 +213,18 @@ export default function StatisticalAnalysisDashboard({
       if (activeYear && activeYear !== 'TODOS') payload.anio = parseInt(activeYear);
       if (activeCiiu && activeCiiu !== 'TODOS') payload.sector = activeCiiu;
 
+      const payloadStr = JSON.stringify(payload);
+      if (payloadStr === lastStatsPayloadRef.current) {
+        return;
+      }
+      lastStatsPayloadRef.current = payloadStr;
+
+      setLoading(true);
+
       let res = await fetch(`${BACKEND_URL}/api/bi/stats`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: payloadStr,
         cache: 'no-store'
       }).catch(() => null);
 
@@ -222,7 +232,7 @@ export default function StatisticalAnalysisDashboard({
         res = await fetch(`/api/bi/stats`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+          body: payloadStr,
           cache: 'no-store'
         }).catch(() => null);
       }
@@ -255,6 +265,7 @@ export default function StatisticalAnalysisDashboard({
 
   // Ejecutar el estrés manual al pulsar el botón
   const handleApplyStress = () => {
+    lastStatsPayloadRef.current = '';
     loadStats();
   };
 
@@ -316,6 +327,11 @@ export default function StatisticalAnalysisDashboard({
       setCompanyDetails(null);
       return;
     }
+
+    if (companyCacheRef.current.has(nit)) {
+      setCompanyDetails(companyCacheRef.current.get(nit));
+      return;
+    }
     
     setLoadingCompanyDetails(true);
     try {
@@ -338,7 +354,7 @@ export default function StatisticalAnalysisDashboard({
           const patTot = k.patrimonio_total?.actual || 0;
           const pasTot = k.pasivos_totales?.actual || (actTot - patTot);
 
-          setCompanyDetails({
+          const parsedDetails = {
             razon_social: dataBi.empresa_info.razon_social || razonSocial || `Empresa (NIT: ${nit})`,
             roa: findG(ig.rentabilidad, 'roa') || (actTot > 0 ? (utNet / actTot) * 100 : 0),
             roe: k.roe?.actual || findG(ig.rentabilidad, 'roe') || 0,
@@ -350,7 +366,9 @@ export default function StatisticalAnalysisDashboard({
             patrimonio: patTot,
             ventas: k.ventas?.actual || 0,
             utilidad_neta: utNet
-          });
+          };
+          companyCacheRef.current.set(nit, parsedDetails);
+          setCompanyDetails(parsedDetails);
           setLoadingCompanyDetails(false);
           return;
         }

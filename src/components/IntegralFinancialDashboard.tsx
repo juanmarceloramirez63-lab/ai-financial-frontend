@@ -354,9 +354,10 @@ export default function IntegralFinancialDashboard({ onFiltersChange, initialFil
     fetchFilters();
   }, []);
 
+  const lastPayloadRef = useRef<string>('');
+
   // Cargar datos del dashboard integral (siempre comparando contra la base completa)
   const fetchDashboardData = async (overrideParams?: any) => {
-    setLoading(true);
     try {
       let finalEmpresa = overrideParams?.empresa !== undefined ? overrideParams.empresa : selectedEmpresa;
       let finalNit = overrideParams?.nit !== undefined ? overrideParams.nit : selectedEmpresaNit;
@@ -392,10 +393,18 @@ export default function IntegralFinancialDashboard({ onFiltersChange, initialFil
         comparar_con: "Base de Datos del Sector"
       };
 
+      const payloadStr = JSON.stringify(payload);
+      if (payloadStr === lastPayloadRef.current && !overrideParams?.force) {
+        return;
+      }
+      lastPayloadRef.current = payloadStr;
+
+      setLoading(true);
+
       let res = await fetch(`${BACKEND_URL}/api/bi/integral-dashboard`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: payloadStr,
         cache: 'no-store'
       }).catch(() => null);
 
@@ -403,7 +412,7 @@ export default function IntegralFinancialDashboard({ onFiltersChange, initialFil
         res = await fetch(`/api/bi/integral-dashboard`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+          body: payloadStr,
           cache: 'no-store'
         }).catch(() => null);
       }
@@ -412,12 +421,15 @@ export default function IntegralFinancialDashboard({ onFiltersChange, initialFil
         const json = await res.json();
         setData(json);
         if (finalEmpresa !== "TODAS" && json.empresa_info?.nit && json.empresa_info?.nit !== 'N/A') {
-          setSelectedEmpresaNit(json.empresa_info.nit);
+          if (selectedEmpresaNit !== json.empresa_info.nit) {
+            setSelectedEmpresaNit(json.empresa_info.nit);
+          }
           if (json.empresa_info.razon_social && selectedEmpresa === "TODAS") {
             setSelectedEmpresa(json.empresa_info.razon_social);
           }
-          if (json.empresa_info.ciiu || json.empresa_info.sector) {
-            setSelectedSector(json.empresa_info.ciiu || json.empresa_info.sector);
+          const sec = json.empresa_info.ciiu || json.empresa_info.sector;
+          if (sec && selectedSector !== sec) {
+            setSelectedSector(sec);
           }
         }
       }
@@ -800,41 +812,74 @@ export default function IntegralFinancialDashboard({ onFiltersChange, initialFil
                 </div>
               )}
 
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400 pointer-events-none" />
-                <input
-                  type="text"
-                  placeholder="Ingresa NIT o Nombre de empresa..."
-                  value={companySearch}
-                  onChange={(e) => {
-                    setCompanySearch(e.target.value);
-                    setShowCompanyDropdown(true);
-                  }}
-                  onFocus={() => setShowCompanyDropdown(true)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
+              <div className="relative flex items-center gap-1.5">
+                <div className="relative flex-1">
+                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Ingresa NIT o Nombre de empresa..."
+                    value={companySearch}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCompanySearch(val);
+                      setShowCompanyDropdown(true);
+                      const cleanDigits = val.replace(/[.\-\s]/g, '');
+                      if (cleanDigits.length === 9 && /^\d+$/.test(cleanDigits)) {
+                        handleCompanySelect(cleanDigits, cleanDigits);
+                      }
+                    }}
+                    onFocus={() => setShowCompanyDropdown(true)}
+                    onBlur={() => {
+                      setTimeout(() => {
+                        const cleanDigits = companySearch.replace(/[.\-\s]/g, '');
+                        if (cleanDigits.length >= 6 && /^\d+$/.test(cleanDigits) && selectedEmpresaNit !== cleanDigits) {
+                          handleCompanySelect(companySearch.trim(), cleanDigits);
+                        }
+                      }, 250);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (filteredCompanies.length > 0) {
+                          const top = filteredCompanies[0];
+                          handleCompanySelect(top.razon_social || top.name, top.nit);
+                        } else if (companySearch.trim()) {
+                          handleCompanySelect(companySearch.trim());
+                        }
+                      }
+                    }}
+                    className="w-full pl-8 pr-8 py-1.5 bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  />
+                  {companySearch && (
+                    <button
+                      onClick={() => {
+                        setCompanySearch('');
+                        setShowCompanyDropdown(false);
+                      }}
+                      className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (companySearch.trim()) {
                       if (filteredCompanies.length > 0) {
                         const top = filteredCompanies[0];
                         handleCompanySelect(top.razon_social || top.name, top.nit);
-                      } else if (companySearch.trim()) {
+                      } else {
                         handleCompanySelect(companySearch.trim());
                       }
                     }
                   }}
-                  className="w-full pl-8 pr-8 py-1.5 bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                />
-                {companySearch && (
-                  <button
-                    onClick={() => {
-                      setCompanySearch('');
-                      setShowCompanyDropdown(false);
-                    }}
-                    className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs font-bold"
-                  >
-                    ✕
-                  </button>
-                )}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors shrink-0 shadow-sm"
+                  title="Consultar empresa o NIT"
+                >
+                  <Search className="w-3 h-3" />
+                  <span>Buscar</span>
+                </button>
               </div>
 
               {/* Selector Rápido de Empresas Filtradas (Máximo 50 elementos para 0 lag) */}
@@ -1069,8 +1114,9 @@ export default function IntegralFinancialDashboard({ onFiltersChange, initialFil
             {/* 9. BOTONES DE APLICAR Y LIMPIAR */}
             <div className="space-y-2 pt-2 border-t border-slate-200">
               <button
-                onClick={fetchDashboardData}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg text-xs transition-all shadow-md flex items-center justify-center gap-2 active:scale-98"
+                type="button"
+                onClick={() => fetchDashboardData({ force: true })}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg text-xs transition-all shadow-md flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
               >
                 <span>APLICAR FILTROS</span>
                 {activeFiltersCount > 0 && (
@@ -1080,8 +1126,9 @@ export default function IntegralFinancialDashboard({ onFiltersChange, initialFil
                 )}
               </button>
               <button
+                type="button"
                 onClick={handleResetFilters}
-                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 rounded-lg text-xs transition-colors"
+                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 rounded-lg text-xs transition-colors cursor-pointer"
               >
                 LIMPIAR FILTROS
               </button>
