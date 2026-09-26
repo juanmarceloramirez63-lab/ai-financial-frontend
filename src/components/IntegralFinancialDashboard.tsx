@@ -416,6 +416,9 @@ export default function IntegralFinancialDashboard({ onFiltersChange, initialFil
           if (json.empresa_info.razon_social && selectedEmpresa === "TODAS") {
             setSelectedEmpresa(json.empresa_info.razon_social);
           }
+          if (json.empresa_info.ciiu || json.empresa_info.sector) {
+            setSelectedSector(json.empresa_info.ciiu || json.empresa_info.sector);
+          }
         }
       }
     } catch (err) {
@@ -463,13 +466,19 @@ export default function IntegralFinancialDashboard({ onFiltersChange, initialFil
     if (!c || c === "TODAS" || c === "" || (typeof c === 'object' && (c?.razon_social === "TODAS" || c?.nit === "TODAS" || !c?.razon_social))) {
       setSelectedEmpresa("TODAS");
       setSelectedEmpresaNit("");
+      setSelectedSector("TODOS");
       setCompanySearch("");
     } else {
       const name = typeof c === 'string' ? c : (c.razon_social || c.name);
       let nit = typeof c === 'object' ? String(c.nit || '') : '';
       if (!nit && filtersList?.empresas) {
         const found = filtersList.empresas.find((emp: any) => (emp.razon_social || emp.name) === name || String(emp.nit) === name);
-        if (found) nit = String(found.nit || '');
+        if (found) {
+          nit = String(found.nit || '');
+          if (found.ciiu || found.sector) {
+            setSelectedSector(found.ciiu || found.sector);
+          }
+        }
       }
       setSelectedEmpresa(name);
       setSelectedEmpresaNit(nit);
@@ -913,23 +922,42 @@ export default function IntegralFinancialDashboard({ onFiltersChange, initialFil
               </div>
             </div>
 
-            {/* 4. FILTRO: SECTOR ECONÓMICO / CIIU (LISTA COMPLETA) */}
+            {/* 4. FILTRO: SECTOR ECONÓMICO / CIIU */}
             <div className="space-y-1">
-              <label className="text-[11px] font-bold text-slate-700 uppercase tracking-tight block">
-                Sector Económico / CIIU ({filtersList?.sectores?.length || DEFAULT_SECTORES.length} sectores)
-              </label>
-              <select
-                value={selectedSector}
-                onChange={(e) => setSelectedSector(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500 truncate"
-              >
-                <option value="TODOS">Todos los Sectores ({filtersList?.sectores?.length || DEFAULT_SECTORES.length})</option>
-                {(filtersList?.sectores && filtersList.sectores.length > 0 ? filtersList.sectores : DEFAULT_SECTORES).map((sec: string, idx: number) => (
-                  <option key={idx} value={sec} title={sec}>
-                    {sec.length > 38 ? sec.substring(0, 38) + '...' : sec}
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-slate-700 uppercase tracking-tight block">
+                  Sector Económico / CIIU
+                </label>
+                {selectedEmpresa !== "TODAS" && (
+                  <span className="text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0.2 rounded font-bold uppercase">
+                    Fijado por Empresa
+                  </span>
+                )}
+              </div>
+
+              {selectedEmpresa !== "TODAS" ? (
+                <div className="bg-indigo-50/90 border border-indigo-200 text-slate-800 text-xs rounded-lg p-2.5 font-medium space-y-1">
+                  <div className="font-bold text-indigo-900 truncate" title={info.ciiu || info.sector || selectedSector}>
+                    🏷️ {info.ciiu || info.sector || selectedSector}
+                  </div>
+                  <div className="text-[10px] text-indigo-600 font-medium">
+                    Comparación automática exclusiva vs {(info.total_empresas_comparadas || 0).toLocaleString('es-CO')} pares del mismo sector
+                  </div>
+                </div>
+              ) : (
+                <select
+                  value={selectedSector}
+                  onChange={(e) => setSelectedSector(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500 truncate"
+                >
+                  <option value="TODOS">Todos los Sectores ({filtersList?.sectores?.length || DEFAULT_SECTORES.length})</option>
+                  {(filtersList?.sectores && filtersList.sectores.length > 0 ? filtersList.sectores : DEFAULT_SECTORES).map((sec: string, idx: number) => (
+                    <option key={idx} value={sec} title={sec}>
+                      {sec.length > 38 ? sec.substring(0, 38) + '...' : sec}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             {/* 5. FILTRO: DEPARTAMENTO */}
