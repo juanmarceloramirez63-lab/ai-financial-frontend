@@ -355,18 +355,40 @@ export default function IntegralFinancialDashboard({ onFiltersChange, initialFil
   }, []);
 
   // Cargar datos del dashboard integral (siempre comparando contra la base completa)
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (overrideParams?: any) => {
     setLoading(true);
     try {
+      let finalEmpresa = overrideParams?.empresa !== undefined ? overrideParams.empresa : selectedEmpresa;
+      let finalNit = overrideParams?.nit !== undefined ? overrideParams.nit : selectedEmpresaNit;
+
+      // Si el usuario escribió un NIT o texto en la barra de búsqueda y no se había seleccionado explícitamente:
+      if ((!finalNit || finalEmpresa === "TODAS") && companySearch.trim()) {
+        const cleanSearch = companySearch.trim();
+        const cleanDigits = cleanSearch.replace(/[.\-\s]/g, '');
+        if (cleanDigits.length >= 5 && /^\d+$/.test(cleanDigits)) {
+          finalNit = cleanDigits;
+          finalEmpresa = cleanSearch;
+        } else if (filtersList?.empresas) {
+          const match = filtersList.empresas.find((e: any) => 
+            String(e.nit) === cleanSearch || 
+            (e.razon_social && e.razon_social.toLowerCase().includes(cleanSearch.toLowerCase()))
+          );
+          if (match) {
+            finalNit = String(match.nit);
+            finalEmpresa = match.razon_social;
+          }
+        }
+      }
+
       const payload: any = {
-        ano_inicio: anoInicio,
-        ano_fin: anoFin,
-        empresa: selectedEmpresa === "TODAS" ? null : selectedEmpresa,
-        nit: selectedEmpresa === "TODAS" ? null : (selectedEmpresaNit || null),
-        sector: selectedSector === "TODOS" ? null : selectedSector,
-        tamano: selectedTamano === "TODOS" ? null : selectedTamano,
-        departamento: selectedDepto === "TODOS" ? null : selectedDepto,
-        ciudad: selectedCiudad === "TODOS" ? null : selectedCiudad,
+        ano_inicio: overrideParams?.anoInicio ?? anoInicio,
+        ano_fin: overrideParams?.anoFin ?? anoFin,
+        empresa: finalEmpresa === "TODAS" ? null : finalEmpresa,
+        nit: finalEmpresa === "TODAS" ? null : (finalNit || null),
+        sector: (overrideParams?.sector ?? selectedSector) === "TODOS" ? null : (overrideParams?.sector ?? selectedSector),
+        tamano: (overrideParams?.tamano ?? selectedTamano) === "TODOS" ? null : (overrideParams?.tamano ?? selectedTamano),
+        departamento: (overrideParams?.departamento ?? selectedDepto) === "TODOS" ? null : (overrideParams?.departamento ?? selectedDepto),
+        ciudad: (overrideParams?.ciudad ?? selectedCiudad) === "TODOS" ? null : (overrideParams?.ciudad ?? selectedCiudad),
         comparar_con: "Base de Datos del Sector"
       };
 
@@ -389,8 +411,11 @@ export default function IntegralFinancialDashboard({ onFiltersChange, initialFil
       if (res && res.ok) {
         const json = await res.json();
         setData(json);
-        if (selectedEmpresa !== "TODAS" && json.empresa_info?.nit && json.empresa_info?.nit !== 'N/A') {
+        if (finalEmpresa !== "TODAS" && json.empresa_info?.nit && json.empresa_info?.nit !== 'N/A') {
           setSelectedEmpresaNit(json.empresa_info.nit);
+          if (json.empresa_info.razon_social && selectedEmpresa === "TODAS") {
+            setSelectedEmpresa(json.empresa_info.razon_social);
+          }
         }
       }
     } catch (err) {
@@ -402,7 +427,7 @@ export default function IntegralFinancialDashboard({ onFiltersChange, initialFil
 
   useEffect(() => {
     fetchDashboardData();
-  }, [anoInicio, anoFin, selectedEmpresa, selectedSector, selectedTamano, selectedDepto, selectedCiudad]);
+  }, [anoInicio, anoFin, selectedEmpresa, selectedEmpresaNit, selectedSector, selectedTamano, selectedDepto, selectedCiudad]);
 
   // Manejo de cambio de rango de años respetando máximo 10 años
   const handleAnoInicioChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -468,6 +493,12 @@ export default function IntegralFinancialDashboard({ onFiltersChange, initialFil
         handleSelectCompany({ razon_social: found.razon_social || found.name, nit: found.nit });
         return;
       }
+    }
+    // Si es un NIT numérico directo
+    const cleanDigits = nameOrNit.replace(/[.\-\s]/g, '');
+    if (cleanDigits.length >= 5 && /^\d+$/.test(cleanDigits)) {
+      handleSelectCompany({ razon_social: nameOrNit, nit: cleanDigits });
+      return;
     }
     handleSelectCompany(nameOrNit);
   };
@@ -723,41 +754,93 @@ export default function IntegralFinancialDashboard({ onFiltersChange, initialFil
             </div>
 
             {/* 2. FILTRO DE EMPRESA / NIT DIRECTO EN EL PANEL LATERAL */}
-            <div className="space-y-1.5 pt-1" ref={dropdownRef}>
+            <div className="space-y-2 pt-1" ref={dropdownRef}>
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-bold text-slate-700 uppercase tracking-tight block">
-                  Buscar Empresa ({filtersList?.total_empresas || companiesList.length} empresas)
+                  Buscar Empresa ({filtersList?.total_empresas || companiesList.length} registradas)
                 </label>
                 {selectedEmpresa !== "TODAS" && (
                   <button
                     onClick={() => handleSelectCompany("TODAS")}
                     className="text-[10px] text-indigo-600 hover:text-indigo-800 font-bold underline cursor-pointer"
                   >
-                    Dejar en Blanco / Todas
+                    Ver Todas
                   </button>
                 )}
               </div>
+
+              {/* Banner de Empresa Seleccionada Activa */}
+              {selectedEmpresa !== "TODAS" && (
+                <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-2.5 flex items-center justify-between text-xs animate-fadeIn">
+                  <div className="truncate pr-2">
+                    <span className="text-[9px] text-indigo-600 font-bold uppercase block">Empresa Activa</span>
+                    <span className="font-bold text-slate-800 truncate block text-xs" title={selectedEmpresa}>
+                      {selectedEmpresa}
+                    </span>
+                    {(selectedEmpresaNit || info.nit) && (
+                      <span className="text-[10px] text-slate-600 font-mono">NIT: {selectedEmpresaNit || info.nit}</span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleSelectCompany("TODAS")}
+                    className="text-rose-600 hover:text-rose-800 hover:bg-rose-100 p-1.5 rounded-lg text-[11px] font-bold shrink-0 transition-colors"
+                    title="Quitar empresa seleccionada y volver a población agregada"
+                  >
+                    ✕ Quitar
+                  </button>
+                </div>
+              )}
+
               <div className="relative">
                 <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Filtrar por NIT o Nombre..."
+                  placeholder="Ingresa NIT o Nombre de empresa..."
                   value={companySearch}
                   onChange={(e) => {
                     setCompanySearch(e.target.value);
                     setShowCompanyDropdown(true);
                   }}
                   onFocus={() => setShowCompanyDropdown(true)}
-                  className="w-full pl-8 pr-2.5 py-1.5 bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (filteredCompanies.length > 0) {
+                        const top = filteredCompanies[0];
+                        handleCompanySelect(top.razon_social || top.name, top.nit);
+                      } else if (companySearch.trim()) {
+                        handleCompanySelect(companySearch.trim());
+                      }
+                    }
+                  }}
+                  className="w-full pl-8 pr-8 py-1.5 bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 />
+                {companySearch && (
+                  <button
+                    onClick={() => {
+                      setCompanySearch('');
+                      setShowCompanyDropdown(false);
+                    }}
+                    className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
+
+              {/* Selector Rápido de Empresas Filtradas (Máximo 50 elementos para 0 lag) */}
               <select
                 value={selectedEmpresaNit || (selectedEmpresa === "TODAS" ? "TODAS" : selectedEmpresa)}
                 onChange={(e) => handleCompanySelect(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500 truncate mt-1"
+                className="w-full bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500 truncate"
               >
                 <option value="TODAS">📊 TODAS (Población Agregada / Sin Empresa)</option>
-                {companiesList?.map((emp: any) => (
+                {selectedEmpresa !== "TODAS" && selectedEmpresaNit && !filteredCompanies.some((e: any) => String(e.nit) === String(selectedEmpresaNit)) && (
+                  <option value={selectedEmpresaNit}>
+                    {selectedEmpresa} (NIT: {selectedEmpresaNit})
+                  </option>
+                )}
+                {filteredCompanies.slice(0, 50).map((emp: any) => (
                   <option key={emp.nit} value={emp.nit}>
                     {emp.razon_social} (NIT: {emp.nit})
                   </option>
@@ -775,9 +858,11 @@ export default function IntegralFinancialDashboard({ onFiltersChange, initialFil
                     <span className="text-[10px] bg-indigo-100 px-1.5 py-0.5 rounded text-indigo-600">General</span>
                   </div>
                   {filteredCompanies.length === 0 ? (
-                    <div className="p-3 text-xs text-slate-400 text-center">No se encontraron empresas</div>
+                    <div className="p-3 text-xs text-slate-400 text-center">
+                      No se encontraron coincidencias para "{companySearch}"
+                    </div>
                   ) : (
-                    filteredCompanies.map((emp: any) => (
+                    filteredCompanies.slice(0, 50).map((emp: any) => (
                       <div
                         key={emp.nit}
                         onClick={() => handleCompanySelect(emp.razon_social, emp.nit)}
